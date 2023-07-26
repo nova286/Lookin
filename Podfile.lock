@@ -7,38 +7,42 @@ PODS:
   - AppCenter/Core (4.4.2)
   - AppCenter/Crashes (4.4.2):
     - AppCenter/Core
-  - LookinShared (1.2.8)
+  - CocoaAsyncSocket (7.6.5)
+  - LookinShared/Wireless (1.2.8):
+    - CocoaAsyncSocket
   - ReactiveObjC (3.1.0)
   - Sparkle (1.27.1)
 
 DEPENDENCIES:
   - AppCenter
-  - LookinShared (from `https://github.com/nova286/LookinServer.git`, commit `6a21883a8eb18997d6c6c9ec8ae3ad25739aca7e`)
+  - LookinShared/Wireless (from `https://github.com/nova286/LookinServer.git`, commit `6ba8231d589c7404064ca8d571c49746a9f67366`)
   - ReactiveObjC (= 3.1.0)
   - Sparkle (~> 1.0)
 
 SPEC REPOS:
   trunk:
     - AppCenter
+    - CocoaAsyncSocket
     - ReactiveObjC
     - Sparkle
 
 EXTERNAL SOURCES:
   LookinShared:
-    :commit: 6a21883a8eb18997d6c6c9ec8ae3ad25739aca7e
+    :commit: 6ba8231d589c7404064ca8d571c49746a9f67366
     :git: https://github.com/nova286/LookinServer.git
 
 CHECKOUT OPTIONS:
   LookinShared:
-    :commit: 6a21883a8eb18997d6c6c9ec8ae3ad25739aca7e
+    :commit: 6ba8231d589c7404064ca8d571c49746a9f67366
     :git: https://github.com/nova286/LookinServer.git
 
 SPEC CHECKSUMS:
   AppCenter: b0eca112a27b71e97488ffa1949ee38c7abd4b79
-  LookinShared: e5ca2b2b0758a1caafffc29cc12764ff92fb419b
+  CocoaAsyncSocket: 065fd1e645c7abab64f7a6a2007a48038fdc6a99
+  LookinShared: 6a5ea30b57825f5d8619726ffc72812b4c025771
   ReactiveObjC: 2a38ea15335de4119d8b17caf1db1484f61db902
   Sparkle: 23f98b268284c8c03e6228230fc8f1807ef041d5
 
-PODFILE CHECKSUM: 3a6d485c3416742e8189e376785f1d4e1107dccb
+PODFILE CHECKSUM: 766ca5f4a0c237b7925e65ee52b8c4eb9c845837
 
 COCOAPODS: 1.17.0

@@ -58,25 +58,25 @@
     window.minSize = NSMakeSize(HierarchyMinWidth + DashboardViewWidth + 200, 500);
     [window center];
     [window setFrameUsingName:LKWindowSizeName_Static];
-    
+
     if (self = [self initWithWindow:window]) {
         [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_handleInspectingAppDidEnd:) name:LKInspectingAppDidEndNotificationName object:nil];
-        
+
         _viewController = [[LKStaticViewController alloc] init];
         window.contentView = self.viewController.view;
         self.contentViewController = self.viewController;
-        
+
         NSToolbar *toolbar = [[NSToolbar alloc] init];
         toolbar.displayMode = NSToolbarDisplayModeIconAndLabel;
         toolbar.sizeMode = NSToolbarSizeModeRegular;
         toolbar.delegate = self;
         window.toolbar = toolbar;
-        
+
         NSToolbarItem *reloadItem = self.toolbarItemsMap[LKToolBarIdentifier_Reload];
         @weakify(self);
         LKStaticAsyncUpdateManager *updateManager = [LKStaticAsyncUpdateManager sharedInstance];
         updateManager.delegate = self;
-        
+
         [[[RACSignal combineLatest:@[RACObserve(self, isFetchingHierarchy),
                                      RACObserve(self, isFetchingDetails)]] distinctUntilChanged] subscribeNext:^(RACTuple * _Nullable x) {
             @strongify(self);
@@ -92,7 +92,7 @@
         [[RACObserve(self, isFetchingHierarchy) distinctUntilChanged] subscribeNext:^(NSNumber *x) {
             reloadItem.enabled = ![x boolValue];
         }];
-        
+
         [RACObserve([LKStaticHierarchyDataSource sharedInstance], selectedItem) subscribeNext:^(id  _Nullable x) {
             @strongify(self);
             NSButton *measureButton = (NSButton *)self.toolbarItemsMap[LKToolBarIdentifier_Measure].view;
@@ -105,7 +105,7 @@
 
 - (void)popupAllInspectableAppsWithSource:(MenuPopoverAppsListControllerEventSource)source {
     NSView *appItemView = [self.toolbarItemsMap objectForKey:LKToolBarIdentifier_App].view;
-    
+
     @weakify(self);
     [[[[LKAppsManager sharedInstance] fetchAppInfosWithImage:YES localInfos:nil] deliverOnMainThread] subscribeNext:^(NSArray<LKInspectableApp *> *apps) {
         @strongify(self);
@@ -115,37 +115,37 @@
         vc.didSelectApp = ^(LKInspectableApp *app) {
             @strongify(popover);
             [popover close];
-            
+
             if (app.serverVersionError) {
                 if (app.serverVersionError.code == LookinErrCode_ServerVersionTooLow) {
                     [LKHelper openLookinWebsiteWithPath:@"faq/server-version-too-low/"];
                 } else {
                     [LKHelper openLookinWebsiteWithPath:@"faq/server-version-too-high/"];
                 }
-                
+
             } else {
                 [self.viewController.progressView animateToProgress:InitialIndicatorProgressWhenFetchHierarchy];
-                
+
                 BOOL isTheSameApp = [[LKAppsManager sharedInstance].inspectingApp.appInfo isEqualToAppInfo:app.appInfo];
-                
+
                 [[app fetchHierarchyData] subscribeNext:^(LookinHierarchyInfo *info) {
                     [self.viewController.progressView finishWithCompletion:nil];
                     [LKAppsManager sharedInstance].inspectingApp = app;
                     [[LKStaticHierarchyDataSource sharedInstance] reloadWithHierarchyInfo:info keepState:isTheSameApp];
-                    
+
                 } error:^(NSError * _Nullable error) {
                     AlertError(error, self.window);
                     [self.viewController.progressView resetToZero];
                 }];
             }
         };
-        
+
         popover.behavior = NSPopoverBehaviorTransient;
         popover.animates = NO;
         popover.contentSize = vc.bestSize;
         popover.contentViewController = vc;
         [popover showRelativeToRect:NSMakeRect(0, 0, appItemView.bounds.size.width, appItemView.bounds.size.height) ofView:appItemView preferredEdge:NSRectEdgeMaxY];
-        
+
     } error:^(NSError * _Nullable error) {
         NSAssert(NO, @"该方法不应该 sendError");
     }];
@@ -174,7 +174,7 @@
         }
         item = [[LKWindowToolbarHelper sharedInstance] makeToolBarItemWithIdentifier:itemIdentifier preferenceManager:[LKPreferenceManager mainManager]];
         self.toolbarItemsMap[itemIdentifier] = item;
-        
+
         if ([item.itemIdentifier isEqualToString:LKToolBarIdentifier_Reload]) {
             item.target = self;
             item.action = @selector(_handleReload);
@@ -191,7 +191,7 @@
         } else if ([item.itemIdentifier isEqualToString:LKToolBarIdentifier_Console]) {
             item.target = self;
             item.action = @selector(_handleConsole);
-            
+
             [[[RACObserve(self.viewController, showConsole) distinctUntilChanged] skip:1] subscribeNext:^(NSNumber *x) {
                 ((NSButton *)item.view).state = x.boolValue ? NSControlStateValueOn : NSControlStateValueOff;
             }];
@@ -236,42 +236,42 @@
         [[LKStaticAsyncUpdateManager sharedInstance] endUpdating];
         return;
     }
-    
+
     LKInspectableApp *app = [LKAppsManager sharedInstance].inspectingApp;
     if (!app) {
         [self popupAllInspectableAppsWithSource:MenuPopoverAppsListControllerEventSourceReloadButton];
         return;
     }
-    
+
     if (self.isFetchingHierarchy) {
         return;
     }
-    
+
     self.isFetchingHierarchy = YES;
-    
+
     [self.viewController.progressView animateToProgress:InitialIndicatorProgressWhenFetchHierarchy];
-    
+
     [LKPerformanceReporter.sharedInstance willStartReload];
     @weakify(self);
     [[app fetchHierarchyData] subscribeNext:^(LookinHierarchyInfo *info) {
         [self.viewController.progressView finishWithCompletion:nil];
         [[LKStaticHierarchyDataSource sharedInstance] reloadWithHierarchyInfo:info keepState:YES];
         self.isFetchingHierarchy = NO;
-        
+
         [LKPerformanceReporter.sharedInstance didFetchHierarchy];
-        
+
     } error:^(NSError * _Nullable error) {
         // error
         @strongify(self);
         [self.viewController.progressView resetToZero];
         self.isFetchingHierarchy = NO;
-        
+
         [[NSAlert alertWithError:error] beginSheetModalForWindow:self.window completionHandler:nil];
     }];
 }
 
 - (void)_handleApp {
-    // 停止可能存在的刷新倒计时    
+    // 停止可能存在的刷新倒计时
     [self popupAllInspectableAppsWithSource:MenuPopoverAppsListControllerEventSourceAppButton];
 }
 
@@ -295,7 +295,7 @@
 
 - (void)_handleMessage:(NSButton *)button {
     NSMenu *menu = [NSMenu new];
-    
+
     NSArray<NSString *> *msgs = [[LKMessageManager sharedInstance] queryMessages];
     for (NSString *msg in msgs) {
         if ([msg isEqualToString:LKMessage_Jobs]) {
@@ -310,7 +310,7 @@
             [menu addItem:[NSMenuItem separatorItem]];
             continue;
         }
-        
+
         if ([msg isEqualToString:LKMessage_NewServerVersion]) {
             [menu addItem:({
                 NSMenuItem *menuItem = [NSMenuItem new];
@@ -337,7 +337,7 @@
             [menu addItem:[NSMenuItem separatorItem]];
             continue;
         }
-        
+
         if ([msg isEqualToString:LKMessage_SwiftSubspec]) {
             [menu addItem:({
                 NSMenuItem *menuItem = [NSMenuItem new];
@@ -365,9 +365,9 @@
             menuItem;
         })];
     }
-    
+
     [NSMenu popUpContextMenu:menu withEvent:[[NSApplication sharedApplication] currentEvent] forView:button];
-    
+
     [MSACAnalytics trackEvent:@"Open Notification" withProperties:@{
         @"Jobs": [NSString stringWithFormat:@"%@", @([msgs containsObject:LKMessage_Jobs])],
         @"SwiftSubspec": [NSString stringWithFormat:@"%@", @([msgs containsObject:LKMessage_SwiftSubspec])],
@@ -380,9 +380,27 @@
     [[LKPreferenceManager mainManager].freeRotation setBOOLValue:!boolValue ignoreSubscriber:nil];
 }
 
+#pragma mark - Others
+
+- (void)_showUSBLowSpeedTipsIfNeeded {
+    if (TutorialMng.hasAlreadyShowedTipsThisLaunch || TutorialMng.USBLowSpeed) {
+        return;
+    }
+    if (!InspectingApp || InspectingApp.appInfo.isWireless || InspectingApp.appInfo.deviceType == LookinAppInfoDeviceSimulator || [LKStaticHierarchyDataSource sharedInstance].flatItems.count < 170) {
+        return;
+    }
+
+    TutorialMng.hasAlreadyShowedTipsThisLaunch = YES;
+	dispatch_async(dispatch_get_main_queue(), ^{
+		[[LKTutorialManager sharedInstance] showPopoverOfView:self.toolbarItemsMap[LKToolBarIdentifier_Reload].view text:NSLocalizedString(@"Inspecting via USB is slower than inspecting a Xcode simulator.", nil) learned:^{
+			[LKTutorialManager sharedInstance].USBLowSpeed = YES;
+		}];
+	});
+}
+
 #pragma mark - <LKAppMenuManagerDelegate>
 
-- (void)appMenuManagerDidSelectReload {    
+- (void)appMenuManagerDidSelectReload {
     if (self.isFetchingHierarchy) {
         return;
     }
@@ -433,7 +451,7 @@
     [manager.zInterspace setDoubleValue:newValue ignoreSubscriber:nil];
 }
 
-- (void)appMenuManagerDidSelectExpansionIndex:(NSUInteger)index {    
+- (void)appMenuManagerDidSelectExpansionIndex:(NSUInteger)index {
     [[LKStaticHierarchyDataSource sharedInstance] adjustExpansionByIndex:index referenceDict:nil selectedItem:nil];
 
     if (!TutorialMng.hasAlreadyShowedTipsThisLaunch && !TutorialMng.quickSelection && index <= 1) {
@@ -444,10 +462,10 @@
 - (void)appMenuManagerDidSelectExport {
     LKExportManager *exportManager = [LKExportManager sharedInstance];
     LookinHierarchyInfo *hierarchyInfo = [LKStaticHierarchyDataSource sharedInstance].rawHierarchyInfo;
-    
+
     __block NSString *fileName;
     __block NSData *exportedData = nil;
-    
+
     LKExportAccessoryView *accessoryView = [LKExportAccessoryView new];
     $(accessoryView).sizeToFit;
     [RACObserve([LKPreferenceManager mainManager], preferredExportCompression) subscribeNext:^(NSNumber *num) {
@@ -455,7 +473,7 @@
         exportedData = [exportManager dataFromHierarchyInfo:hierarchyInfo imageCompression:compression fileName:&fileName];
         accessoryView.dataSize = exportedData.length;
     }];
-    
+
     NSSavePanel *panel = [NSSavePanel savePanel];
     panel.accessoryView = accessoryView;
     [panel setNameFieldStringValue:fileName];
@@ -477,7 +495,7 @@
             }
         }
     }];
-    
+
     [MSACAnalytics trackEvent:@"Export Document"];
 }
 
@@ -487,7 +505,7 @@
     file.serverVersion = newHierarchyInfo.serverVersion;
     file.hierarchyInfo = newHierarchyInfo;
     [[LKNavigationManager sharedInstance] showReaderWithHierarchyFile:file title:nil];
-    
+
     [MSACAnalytics trackEvent:@"Open New Window"];
 
 }
@@ -514,28 +532,28 @@
 - (void)detailUpdateTasksTotalCount:(NSUInteger)totalCount finishedCount:(NSUInteger)finishedCount {
     NSToolbarItem *reloadItem = self.toolbarItemsMap[LKToolBarIdentifier_Reload];
     NSButton *reloadButton = (NSButton *)reloadItem.view;
-    
+
     BOOL isFetching = (totalCount > finishedCount);
-    
+
     if (isFetching) {
         if (self.isFetchingDetails) {
             // 继续维持 fetch 状态
         } else {
             // 进入 fetch 状态
             self.isFetchingDetails = YES;
-            
+
             NSImage *image = NSImageMake(@"icon_stop");
             image.template = YES;
             reloadButton.image = image;
         }
         reloadItem.label = [NSString stringWithFormat:@"%@ / %@", @(finishedCount), @(totalCount)];
-        
+
     } else {
         if (self.isFetchingDetails) {
             // 退出 fetch 状态
             self.isFetchingDetails = NO;
             reloadItem.label = NSLocalizedString(@"Reload", nil);
-            
+
             NSImage *image = NSImageMake(@"icon_reload");
             image.template = YES;
             reloadButton.image = image;

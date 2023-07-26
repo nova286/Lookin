@@ -2,12 +2,12 @@ use_frameworks!
 
 #inhibit_all_warnings!
 
-target 'LookinClient' do 
+target 'LookinClient' do
     platform :osx, '11.0'
     pod 'AppCenter'
     pod 'ReactiveObjC', '3.1.0'
     pod 'Sparkle', '~> 1.0'
-    pod 'LookinShared', :git=>'https://github.com/nova286/LookinServer.git', :commit => '6a21883a8eb18997d6c6c9ec8ae3ad25739aca7e'
+    pod 'LookinShared/Wireless', :git=>'https://github.com/nova286/LookinServer.git', :commit => '6ba8231d589c7404064ca8d571c49746a9f67366'
     #pod 'LookinShared', :path=>'../LookinServer/'
 end
 
