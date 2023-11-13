@@ -1643,6 +1643,7 @@
 					"$(inherited)",
 					"COCOAPODS=1",
 					"SHOULD_COMPILE_LOOKIN_SERVER=1",
+					"LOOKIN_SERVER_WIRELESS=1",
 				);
 				INFOPLIST_FILE = LookinClient/LookinClient_Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1684,6 +1685,7 @@
 					"$(inherited)",
 					"COCOAPODS=1",
 					"SHOULD_COMPILE_LOOKIN_SERVER=1",
+					"LOOKIN_SERVER_WIRELESS=1",
 				);
 				INFOPLIST_FILE = LookinClient/LookinClient_Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
