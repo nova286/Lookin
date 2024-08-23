@@ -20,6 +20,7 @@ NSToolbarItemIdentifier const LKToolBarIdentifier_Scale = @"1";
 NSToolbarItemIdentifier const LKToolBarIdentifier_Setting = @"2";
 NSToolbarItemIdentifier const LKToolBarIdentifier_Reload = @"3";
 NSToolbarItemIdentifier const LKToolBarIdentifier_App = @"5";
+NSToolbarItemIdentifier const LKToolBarIdentifier_App_Wireless = @"6";
 NSToolbarItemIdentifier const LKToolBarIdentifier_AppInReadMode = @"12";
 NSToolbarItemIdentifier const LKToolBarIdentifier_Add = @"13";
 NSToolbarItemIdentifier const LKToolBarIdentifier_Remove = @"14";
@@ -55,11 +56,11 @@ static NSString * const Key_BindingAppInfo = @"AppInfo";
 
 - (NSToolbarItem *)makeToolBarItemWithIdentifier:(NSToolbarItemIdentifier)identifier preferenceManager:(LKPreferenceManager *)manager {
     NSAssert(![identifier isEqualToString:LKToolBarIdentifier_AppInReadMode], @"请使用 makeAppInReadModeItemWithAppInfo: 方法");
-    
+
     if ([identifier isEqualToString:LKToolBarIdentifier_Measure]) {
         NSImage *image = NSImageMake(@"icon_measure");
         image.template = YES;
-        
+
         NSButton *button = [NSButton new];
         [button setImage:image];
         button.bezelStyle = NSBezelStyleTexturedRounded;
@@ -67,46 +68,46 @@ static NSString * const Key_BindingAppInfo = @"AppInfo";
         button.target = self;
         button.action = @selector(_handleToggleMeasureButton:);
         [button lookin_bindObject:manager forKey:@"manager"];
-        
+
         NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:LKToolBarIdentifier_Measure];
         item.label = NSLocalizedString(@"Measure", nil);
         item.view = button;
         item.minSize = NSMakeSize(48, 34);
 
         [manager.measureState subscribe:self action:@selector(_handleMeasureStateDidChange:) relatedObject:button sendAtOnce:YES];
-        
+
         return item;
     }
-    
+
     if ([identifier isEqualToString:LKToolBarIdentifier_Rotation]) {
         NSImage *image = NSImageMake(@"icon_rotation");
         image.template = YES;
-        
+
         NSButton *button = [NSButton new];
         [button setImage:image];
         button.bezelStyle = NSBezelStyleTexturedRounded;
         [button setButtonType:NSButtonTypePushOnPushOff];
-        
+
         NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:LKToolBarIdentifier_Rotation];
         item.label = NSLocalizedString(@"Free Rotation", nil);
         item.view = button;
         item.minSize = NSMakeSize(48, 34);
 
         [manager.freeRotation subscribe:self action:@selector(_handleFreeRotationDidChange:) relatedObject:button sendAtOnce:YES];
-        
+
         return item;
     }
-    
+
     if ([identifier isEqualToString:LKToolBarIdentifier_Dimension]) {
         NSImage *image_2d = NSImageMake(@"icon_2d");
         image_2d.template = YES;
         NSImage *image_3d = NSImageMake(@"icon_3d");
         image_3d.template = YES;
-        
+
         NSSegmentedControl *control = [NSSegmentedControl segmentedControlWithImages:@[image_2d, image_3d] trackingMode:NSSegmentSwitchTrackingSelectOne target:self action:@selector(_handleDimension:)];
         [control lookin_bindObjectWeakly:manager forKey:Key_BindingPreferenceManager];
         control.segmentDistribution = NSSegmentDistributionFillEqually;
-        
+
         NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:LKToolBarIdentifier_Dimension];
         item.label = @"2D / 3D";
         item.view = control;
@@ -116,10 +117,10 @@ static NSString * const Key_BindingAppInfo = @"AppInfo";
 
         return item;
     }
-    
+
     if ([identifier isEqualToString:LKToolBarIdentifier_Scale]) {
         double scale = manager.previewScale.currentDoubleValue;
-        
+
         NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:LKToolBarIdentifier_Scale];
         LKWindowToolbarScaleView *scaleView = [LKWindowToolbarScaleView new];
         scaleView.slider.minValue = LookinPreviewMinScale;
@@ -134,54 +135,54 @@ static NSString * const Key_BindingAppInfo = @"AppInfo";
         [scaleView.slider lookin_bindObjectWeakly:manager forKey:Key_BindingPreferenceManager];
         [scaleView.increaseButton lookin_bindObjectWeakly:manager forKey:Key_BindingPreferenceManager];
         [scaleView.decreaseButton lookin_bindObjectWeakly:manager forKey:Key_BindingPreferenceManager];
-        
+
         item.label = NSLocalizedString(@"Zoom", nil);
         item.view = scaleView;
         item.minSize = NSMakeSize(160, 34);
-        
+
         [manager.previewScale subscribe:self action:@selector(_handlePreviewScaleDidChange:) relatedObject:scaleView.slider sendAtOnce:YES];
-        
+
         return item;
     }
-    
+
     if ([identifier isEqualToString:LKToolBarIdentifier_Setting]) {
         NSImage *image = NSImageMake(@"icon_setting");
         image.template = YES;
-        
+
         NSButton *button = [NSButton new];
         [button setImage:image];
         button.bezelStyle = NSBezelStyleTexturedRounded;
         [button lookin_bindObjectWeakly:manager forKey:Key_BindingPreferenceManager];
-        
+
         NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:LKToolBarIdentifier_Setting];
         item.view = button;
         item.minSize = NSMakeSize(48, 34);
         return item;
     }
-    
+
     if ([identifier isEqualToString:LKToolBarIdentifier_Reload]) {
         NSImage *image = NSImageMake(@"icon_reload");
         image.template = YES;
-        
+
         NSButton *button = [NSButton new];
         [button setImage:image];
         button.bezelStyle = NSBezelStyleTexturedRounded;
-        
+
         NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:LKToolBarIdentifier_Reload];
         item.label = NSLocalizedString(@"Reload", nil);
         item.view = button;
         item.minSize = NSMakeSize(68, 34);
         return item;
     }
-    
+
     if ([identifier isEqualToString:LKToolBarIdentifier_App]) {
         LKWindowToolbarAppButton *button = [LKWindowToolbarAppButton new];
         button.bezelStyle = NSBezelStyleTexturedRounded;
-        
+
         NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:LKToolBarIdentifier_App];
         item.label = NSLocalizedString(@"Select App", nil);
         item.view = button;
-        
+
         [[RACObserve([LKAppsManager sharedInstance], inspectingApp) takeUntil:item.rac_willDeallocSignal] subscribeNext:^(LKInspectableApp *app) {
             button.appInfo = app.appInfo;
             if (app) {
@@ -194,7 +195,19 @@ static NSString * const Key_BindingAppInfo = @"AppInfo";
         }];
         return item;
     }
-    
+
+	if ([identifier isEqualToString:LKToolBarIdentifier_App_Wireless]) {
+		NSButton *button = [NSButton new];
+		[button setTitle:@"ᯤ"];
+		button.bezelStyle = NSBezelStyleTexturedRounded;
+
+		NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:LKToolBarIdentifier_App_Wireless];
+		item.label = NSLocalizedString(@"Wireless Connections", nil);
+		item.view = button;
+		item.minSize = NSMakeSize(48, 34);
+		return item;
+	}
+
     if ([identifier isEqualToString:LKToolBarIdentifier_Console]) {
         NSImage *image = NSImageMake(@"icon_console");
         image.template = YES;
@@ -203,14 +216,14 @@ static NSString * const Key_BindingAppInfo = @"AppInfo";
         [button setImage:image];
         button.bezelStyle = NSBezelStyleTexturedRounded;
         [button setButtonType:NSButtonTypePushOnPushOff];
-        
+
         NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:LKToolBarIdentifier_Console];
         item.label = NSLocalizedString(@"Console", nil);
         item.view = button;
         item.minSize = NSMakeSize(48, 34);
         return item;
     }
-    
+
     if ([identifier isEqualToString:LKToolBarIdentifier_FastMode]) {
         NSImage *image = NSImageMake(@"icon_turbo");
         image.template = YES;
@@ -219,12 +232,12 @@ static NSString * const Key_BindingAppInfo = @"AppInfo";
         [button setImage:image];
         button.bezelStyle = NSBezelStyleTexturedRounded;
         [button setButtonType:NSButtonTypePushOnPushOff];
-        
+
         NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:LKToolBarIdentifier_FastMode];
         item.label = NSLocalizedString(@"Fast Mode", nil);
         item.view = button;
         item.minSize = NSMakeSize(60, 34);
-        
+
         [manager.fastMode subscribe:self action:@selector(_handleFastModeDidChange:) relatedObject:button sendAtOnce:YES];
         return item;
     }
@@ -240,49 +253,49 @@ static NSString * const Key_BindingAppInfo = @"AppInfo";
         item.minSize = NSMakeSize(62, 34);
         return item;
     }
-    
+
     if ([identifier isEqualToString:LKToolBarIdentifier_Add]) {
         NSImage *image = [NSImage imageNamed:NSImageNameAddTemplate];
         image.template = YES;
-        
+
         NSButton *button = [NSButton new];
         [button setImage:image];
         button.bezelStyle = NSBezelStyleTexturedRounded;
-        
+
         NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:LKToolBarIdentifier_Add];
         item.view = button;
         item.minSize = NSMakeSize(48, 34);
         return item;
     }
-    
+
     if ([identifier isEqualToString:LKToolBarIdentifier_Remove]) {
         NSImage *image = NSImageMake(@"icon_delete");
         image.template = YES;
-        
+
         NSButton *button = [NSButton new];
         [button setImage:image];
         button.bezelStyle = NSBezelStyleTexturedRounded;
-        
+
         NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:LKToolBarIdentifier_Remove];
         item.view = button;
         item.minSize = NSMakeSize(48, 34);
         return item;
     }
-    
+
     if ([identifier isEqualToString:LKToolBarIdentifier_Message]) {
         NSImage *image = NSImageMake(@"icon_notification");
         image.template = YES;
-        
+
         NSButton *button = [NSButton new];
         [button setImage:image];
         button.bezelStyle = NSBezelStyleTexturedRounded;
-        
+
         NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:LKToolBarIdentifier_Message];
         item.view = button;
         item.minSize = NSMakeSize(48, 34);
         return item;
     }
-    
+
     NSAssert(NO, @"");
     return nil;
 }
@@ -292,12 +305,12 @@ static NSString * const Key_BindingAppInfo = @"AppInfo";
     button.bezelStyle = NSBezelStyleTexturedRounded;
     [button lookin_bindObject:appInfo forKey:Key_BindingAppInfo];
     button.appInfo = appInfo;
-    
+
     NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:LKToolBarIdentifier_AppInReadMode];
     item.label = @"iOS App";
     item.view = button;
     item.minSize = NSMakeSize(button.bestWidth + 6, 34);
-    
+
     item.maxSize = item.minSize;
     return item;
 }
