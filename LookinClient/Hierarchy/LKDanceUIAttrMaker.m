@@ -55,16 +55,13 @@
     NSError *error;
     NSDictionary *dict = [NSJSONSerialization JSONObjectWithData:jsonData options:kNilOptions error:&error];
     if (error) {
-        NSAssert(NO, @"");
         return nil;
     }
     if (![dict isKindOfClass:[NSDictionary class]]) {
-        NSAssert(NO, @"");
         return nil;
     }
     NSString *type = dict[@"type"];
-    if (!type) {
-        NSAssert(NO, @"");
+    if (![type isKindOfClass:[NSString class]] || type.length == 0) {
         return nil;
     }
     return type;

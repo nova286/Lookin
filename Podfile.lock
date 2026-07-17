@@ -13,7 +13,7 @@ PODS:
 
 DEPENDENCIES:
   - AppCenter
-  - LookinShared (from `https://github.com/nova286/LookinServer.git`, commit `c681093cb695a2664e1205dde2f31f71f049f230`)
+  - LookinShared (from `https://github.com/nova286/LookinServer.git`, commit `04c9a80ca5f3fc24366aa9fb50cde71bf0978a67`)
   - ReactiveObjC (= 3.1.0)
   - Sparkle (~> 1.0)
 
@@ -25,12 +25,12 @@ SPEC REPOS:
 
 EXTERNAL SOURCES:
   LookinShared:
-    :commit: c681093cb695a2664e1205dde2f31f71f049f230
+    :commit: 04c9a80ca5f3fc24366aa9fb50cde71bf0978a67
     :git: https://github.com/nova286/LookinServer.git
 
 CHECKOUT OPTIONS:
   LookinShared:
-    :commit: c681093cb695a2664e1205dde2f31f71f049f230
+    :commit: 04c9a80ca5f3fc24366aa9fb50cde71bf0978a67
     :git: https://github.com/nova286/LookinServer.git
 
 SPEC CHECKSUMS:
@@ -39,6 +39,6 @@ SPEC CHECKSUMS:
   ReactiveObjC: 2a38ea15335de4119d8b17caf1db1484f61db902
   Sparkle: 23f98b268284c8c03e6228230fc8f1807ef041d5
 
-PODFILE CHECKSUM: 10444fdb47d87eb25d74b74f96f8b88a819db464
+PODFILE CHECKSUM: 7cc0e8fae406f8b5aaacbb7fce505820aa0f79d2
 
 COCOAPODS: 1.13.0
