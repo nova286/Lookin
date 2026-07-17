@@ -144,7 +144,8 @@
     [self _setUpColors];
     
     // 根据 subitems 属性打平为二维数组，同时给每个 item 设置 indentLevel
-    self.rawFlatItems = [LookinDisplayItem flatItemsFromHierarchicalItems:info.displayItems];
+    NSArray<LookinDisplayItem *> *hierarchyRootItems = [self hierarchyRootItemsForInfo:info];
+    self.rawFlatItems = [LookinDisplayItem flatItemsFromHierarchicalItems:hierarchyRootItems];
     NSArray<LookinDisplayItem *> *flatItems = self.rawFlatItems.copy;
     
     // 设置 preferToBeCollapsed 属性
@@ -240,6 +241,10 @@
     }
     
     [self.didReloadHierarchyInfo sendNext:nil];
+}
+
+- (NSArray<LookinDisplayItem *> *)hierarchyRootItemsForInfo:(LookinHierarchyInfo *)info {
+    return info.displayItems;
 }
 
 - (NSInteger)numberOfRows {
@@ -358,7 +363,7 @@
         
         if (selectedItem) {
             __block LookinDisplayItem *preferedSelectedItem = nil;
-            LookinDisplayItem *keyWindowRootItem = [self.rawHierarchyInfo.displayItems lookin_firstFiltered:^BOOL(LookinDisplayItem *obj) {
+            LookinDisplayItem *keyWindowRootItem = [[self hierarchyRootItemsForInfo:self.rawHierarchyInfo] lookin_firstFiltered:^BOOL(LookinDisplayItem *obj) {
                 return obj.representedAsKeyWindow;
             }];
             [[LookinDisplayItem flatItemsFromHierarchicalItems:@[keyWindowRootItem]] enumerateObjectsWithOptions:NSEnumerationReverse usingBlock:^(LookinDisplayItem * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
@@ -371,13 +376,14 @@
         }
         
     } else {
-        LookinDisplayItem *keyWindowItem = [self.rawHierarchyInfo.displayItems lookin_firstFiltered:^BOOL(LookinDisplayItem *windowItem) {
+        NSArray<LookinDisplayItem *> *hierarchyRootItems = [self hierarchyRootItemsForInfo:self.rawHierarchyInfo];
+        LookinDisplayItem *keyWindowItem = [hierarchyRootItems lookin_firstFiltered:^BOOL(LookinDisplayItem *windowItem) {
             return windowItem.representedAsKeyWindow;
         }];
         if (!keyWindowItem) {
-            keyWindowItem = self.rawHierarchyInfo.displayItems.firstObject;
+            keyWindowItem = hierarchyRootItems.firstObject;
         }
-        [self.rawHierarchyInfo.displayItems enumerateObjectsUsingBlock:^(LookinDisplayItem * _Nonnull windowItem, NSUInteger idx, BOOL * _Nonnull stop) {
+        [hierarchyRootItems enumerateObjectsUsingBlock:^(LookinDisplayItem * _Nonnull windowItem, NSUInteger idx, BOOL * _Nonnull stop) {
             if (windowItem == keyWindowItem) {
                 return;
             }

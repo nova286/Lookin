@@ -28,6 +28,8 @@
 
 @property(nonatomic, assign) BOOL shouldIgnoreFastModeAutoUpdate;
 @property(nonatomic, assign) BOOL isUsingDanceUI;
+@property(nonatomic, assign, readwrite) BOOL swiftUISemanticHierarchyAvailable;
+@property(nonatomic, strong) LookinDisplayItem *swiftUISemanticRoot;
 
 @end
 
@@ -56,6 +58,19 @@
 #pragma mark - Public
 
 - (void)reloadWithHierarchyInfo:(LookinHierarchyInfo *)info keepState:(BOOL)keepState {
+    NSArray<LookinDisplayItem *> *allItems = [LookinDisplayItem flatItemsFromHierarchicalItems:info.displayItems];
+    LookinDisplayItem *semanticRoot = [allItems lookin_firstFiltered:^BOOL(LookinDisplayItem *item) {
+        return [item.customInfo.semanticKind isEqualToString:@"swiftui-root"];
+    }];
+    BOOL wasAvailable = self.swiftUISemanticHierarchyAvailable;
+    self.swiftUISemanticRoot = semanticRoot.copy;
+    self.swiftUISemanticHierarchyAvailable = (semanticRoot != nil);
+    if (!wasAvailable && self.swiftUISemanticHierarchyAvailable) {
+        _showsSwiftUISemanticHierarchy = YES;
+    } else if (!self.swiftUISemanticHierarchyAvailable) {
+        _showsSwiftUISemanticHierarchy = NO;
+    }
+
     [super reloadWithHierarchyInfo:info keepState:keepState];
     
     _appInfo = info.appInfo;
@@ -78,6 +93,24 @@
     BOOL shouldUpdateAll = (LKPreferenceManager.mainManager.fastMode.currentBOOLValue == NO);
     if (shouldUpdateAll) {
         [[LKStaticAsyncUpdateManager sharedInstance] updateAll];        
+    }
+}
+
+- (NSArray<LookinDisplayItem *> *)hierarchyRootItemsForInfo:(LookinHierarchyInfo *)info {
+    if (self.showsSwiftUISemanticHierarchy && self.swiftUISemanticRoot) {
+        return @[self.swiftUISemanticRoot];
+    }
+    return [super hierarchyRootItemsForInfo:info];
+}
+
+- (void)setShowsSwiftUISemanticHierarchy:(BOOL)showsSwiftUISemanticHierarchy {
+    BOOL nextValue = showsSwiftUISemanticHierarchy && self.swiftUISemanticHierarchyAvailable;
+    if (_showsSwiftUISemanticHierarchy == nextValue) {
+        return;
+    }
+    _showsSwiftUISemanticHierarchy = nextValue;
+    if (self.rawHierarchyInfo) {
+        [self reloadWithHierarchyInfo:self.rawHierarchyInfo keepState:NO];
     }
 }
 
@@ -155,7 +188,7 @@
         
         displayItem.subitems = detail.subitems;
         // 根据 subitems 属性打平为二维数组，同时给每个 item 设置 indentLevel
-        self.rawFlatItems = [LookinDisplayItem flatItemsFromHierarchicalItems:self.rawHierarchyInfo.displayItems];
+        self.rawFlatItems = [LookinDisplayItem flatItemsFromHierarchicalItems:[self hierarchyRootItemsForInfo:self.rawHierarchyInfo]];
         self.flatItems = self.rawFlatItems;
         [self.didReloadHierarchyInfo sendNext:nil];
         

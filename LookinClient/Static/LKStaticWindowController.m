@@ -158,7 +158,7 @@
 }
 
 - (NSArray<NSToolbarItemIdentifier> *)toolbarDefaultItemIdentifiers:(NSToolbar *)toolbar {
-    NSMutableArray *ret = @[LKToolBarIdentifier_Reload, LKToolBarIdentifier_FastMode, LKToolBarIdentifier_App, NSToolbarFlexibleSpaceItemIdentifier, LKToolBarIdentifier_Dimension, LKToolBarIdentifier_Rotation, LKToolBarIdentifier_Setting, NSToolbarFlexibleSpaceItemIdentifier, LKToolBarIdentifier_Scale, NSToolbarFlexibleSpaceItemIdentifier, LKToolBarIdentifier_Measure, LKToolBarIdentifier_Console].mutableCopy;
+    NSMutableArray *ret = @[LKToolBarIdentifier_Reload, LKToolBarIdentifier_FastMode, LKToolBarIdentifier_App, LKToolBarIdentifier_SwiftUI, NSToolbarFlexibleSpaceItemIdentifier, LKToolBarIdentifier_Dimension, LKToolBarIdentifier_Rotation, LKToolBarIdentifier_Setting, NSToolbarFlexibleSpaceItemIdentifier, LKToolBarIdentifier_Scale, NSToolbarFlexibleSpaceItemIdentifier, LKToolBarIdentifier_Measure, LKToolBarIdentifier_Console].mutableCopy;
     if ([[[LKMessageManager sharedInstance] queryMessages] count] > 0) {
         [ret addObject:LKToolBarIdentifier_Message];
         [MSACAnalytics trackEvent:@"Show Notification"];
@@ -202,9 +202,25 @@
         } else if ([item.itemIdentifier isEqualToString:LKToolBarIdentifier_FastMode]) {
             item.target = self;
             item.action = @selector(handleFastMode);
+        } else if ([item.itemIdentifier isEqualToString:LKToolBarIdentifier_SwiftUI]) {
+            NSButton *button = (NSButton *)item.view;
+            button.target = self;
+            button.action = @selector(_handleSwiftUIHierarchy:);
+            LKStaticHierarchyDataSource *dataSource = [LKStaticHierarchyDataSource sharedInstance];
+            [RACObserve(dataSource, swiftUISemanticHierarchyAvailable) subscribeNext:^(NSNumber *available) {
+                button.enabled = available.boolValue;
+            }];
+            [RACObserve(dataSource, showsSwiftUISemanticHierarchy) subscribeNext:^(NSNumber *shows) {
+                button.state = shows.boolValue ? NSControlStateValueOn : NSControlStateValueOff;
+            }];
         }
     }
     return item;
+}
+
+- (void)_handleSwiftUIHierarchy:(NSButton *)sender {
+    LKStaticHierarchyDataSource *dataSource = [LKStaticHierarchyDataSource sharedInstance];
+    dataSource.showsSwiftUISemanticHierarchy = (sender.state == NSControlStateValueOn);
 }
 
 #pragma mark - Event Handler
