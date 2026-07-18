@@ -32,6 +32,10 @@ xcodebuild -workspace Lookin.xcworkspace -scheme LookinClient -configuration Deb
 
 These controls are intended only for local debugging. The matching server package must remain excluded from production app binaries.
 
+## Automated macOS builds
+
+GitHub Actions builds the Release client for every push and pull request. Every push and manual **Build Lookin Desktop** run uploads an ad-hoc signed universal app ZIP as a workflow artifact. Pushing a `v*` tag also publishes the ZIP and its SHA-256 checksum to GitHub Releases.
+
 # Repository
 LookinServer: https://github.com/QMUI/LookinServer
 
@@ -80,6 +84,10 @@ xcodebuild -workspace Lookin.xcworkspace -scheme LookinClient -configuration Deb
 ```
 
 这些能力只用于本地调试，配套 Server 包必须继续从生产 App 二进制中排除。
+
+## 自动构建 macOS 客户端
+
+GitHub Actions 会为每次 push 和 pull request 构建 Release 客户端。每次 push 和手动运行 **Build Lookin Desktop** 都会上传经过 ad-hoc 签名的通用架构 App ZIP。推送 `v*` tag 时，还会把 ZIP 和 SHA-256 校验文件发布到 GitHub Releases。
 
 # 源代码仓库
 
