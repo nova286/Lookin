@@ -37,7 +37,9 @@ done
 SHARED_SOURCES=()
 while IFS= read -r source_file; do
   SHARED_SOURCES+=("${source_file}")
-done < <(find "${LOOKIN_SHARED_DIR}/Src/Main/Shared" "${LOOKIN_SHARED_DIR}/Src/Base" -name '*.m' | sort)
+done < <(find "${LOOKIN_SHARED_DIR}/Src/Main/Shared" "${LOOKIN_SHARED_DIR}/Src/Base" \
+  -path "${LOOKIN_SHARED_DIR}/Src/Main/Shared/Channel" -prune -o \
+  -name '*.m' -print | sort)
 
 xcrun --sdk macosx clang \
   "${ARCH_FLAGS[@]}" \
