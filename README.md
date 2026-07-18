@@ -37,6 +37,19 @@ See [`LookinCLI/README.md`](LookinCLI/README.md) for CLI usage and [`Docs/lookin
 ## via Swift Package Manager:
 `https://github.com/QMUI/LookinServer/`
 
+## Experimental wireless connection
+
+This fork pairs with the `codex/upstream-wireless` branch of [nova286/LookinServer](https://github.com/nova286/LookinServer). The inspected app and Mac must be on the same trusted local network. Start wireless discovery explicitly in the iOS app as documented by LookinServer, then use **Wireless Connections** in the launch window or workspace toolbar and confirm the request on the iOS device.
+
+The transport is not encrypted or cryptographically authenticated. Remembered identifiers reduce repeated prompts but do not prove peer identity, so this feature is for Debug builds on trusted networks only. The client limits authorization waits to 30 seconds, accepts bounded protocol frames from the paired server, does not log device identifiers, and supports one inspecting Mac per app session.
+
+Manual verification requires a physical iOS device:
+
+1. Start the Debug app and post `Lookin_startWirelessConnection` after it becomes active.
+2. Open this Lookin client, choose **Wireless Connections**, and select the device.
+3. Approve the prompt on the iOS device, load the hierarchy, and verify an attribute edit.
+4. Post `Lookin_endWirelessConnection` and verify that the wireless session closes.
+
 ## Experimental SwiftUI inspector
 
 This fork pairs with the `codex/swiftui-attached-macro` branch of [nova286/LookinServer](https://github.com/nova286/LookinServer). When the inspected app exposes SwiftUI semantic nodes, the toolbar shows a **SwiftUI** mode with source types and source locations. Registered nodes provide editable temporary overrides for size, offset, scale, visibility, opacity, and background color. After an edit, Lookin automatically reloads the hierarchy and screenshot while preserving the selected node and expansion state.
@@ -105,6 +118,14 @@ CLI 使用见 [`LookinCLI/README.md`](LookinCLI/README.md)，开发、构建、�
 
 ## 通过 Swift Package Manager:
 `https://github.com/QMUI/LookinServer/`
+
+## 实验性无线连接
+
+此 fork 与 [nova286/LookinServer](https://github.com/nova286/LookinServer) 的 `codex/upstream-wireless` 分支配套使用。被检查 App 与 Mac 必须处于同一个可信局域网；按 LookinServer 文档在 iOS App 中显式启动无线发现后，在启动窗口或工作区工具栏点击 **Wireless Connections**，选择设备并在 iOS 端确认。
+
+传输内容没有加密，记住的设备标识也不是密码学身份证明，因此只应用于可信网络上的 Debug 构建。客户端会在 30 秒后结束未完成的授权等待，配套 Server 会限制协议帧大小；两端不会记录设备标识，且同一 App 会话同时只允许一台 Mac 检查。
+
+完整验证需要真机：启动 Debug App 并在 active 后发送 `Lookin_startWirelessConnection`，从 macOS 客户端选择设备，在 iOS 端允许连接，然后验证层级加载与属性修改；最后发送 `Lookin_endWirelessConnection` 并确认会话关闭。
 
 ## 实验性 SwiftUI Inspector
 

@@ -43,11 +43,11 @@ NSString *const LKInspectingAppDidEndNotificationName = @"LKInspectingAppDidEndN
         _didAutoReconnectSucc = [RACSubject subject];
         
         @weakify(self);
-        [[[[LKConnectionManager sharedInstance].channelWillEnd filter:^BOOL(Lookin_PTChannel *channel) {
+        [[[[LKConnectionManager sharedInstance].channelWillEnd filter:^BOOL(id<LookinChannelProtocol> channel) {
             @strongify(self);
             return channel == self.inspectingApp.channel;
             
-        }] flattenMap:^__kindof RACSignal * _Nullable(Lookin_PTChannel *channel) {
+        }] flattenMap:^__kindof RACSignal * _Nullable(id<LookinChannelProtocol> channel) {
             @strongify(self);
             
             NSLog(@"current connection end");
@@ -120,13 +120,13 @@ NSString *const LKInspectingAppDidEndNotificationName = @"LKInspectingAppDidEndN
     }] ? : @[];
     NSDictionary *params = @{@"needImages":@(needImages), @"local":localInfoIdentifiers};
     
-    return [[[[LKConnectionManager sharedInstance] tryToConnectAllPorts] flattenMap:^__kindof RACSignal * _Nullable(NSArray<Lookin_PTChannel *> *connectedChannels) {
+    return [[[[LKConnectionManager sharedInstance] tryToConnectAllPorts] flattenMap:^__kindof RACSignal * _Nullable(NSArray<id<LookinChannelProtocol>> *connectedChannels) {
         if (!connectedChannels.count) {
             // 没有任何 channel
             return [RACSignal return:nil];
         }
         
-        NSArray<RACSignal *> *signals = [connectedChannels lookin_map:^id(NSUInteger idx, Lookin_PTChannel *channel) {
+        NSArray<RACSignal *> *signals = [connectedChannels lookin_map:^id(NSUInteger idx, id<LookinChannelProtocol> channel) {
             return [[[LKConnectionManager sharedInstance] requestWithType:LookinRequestTypeApp data:params channel:channel] catch:^RACSignal * _Nonnull(NSError * _Nonnull error) {
                 if (error.code == LookinErrCode_ServerVersionTooHigh || error.code == LookinErrCode_ServerVersionTooLow) {
                     // 这些 Lookin 版本不匹配的错误应该被保留，因为业务需要显示这些错误
@@ -154,7 +154,7 @@ NSString *const LKInspectingAppDidEndNotificationName = @"LKInspectingAppDidEndN
             }
             
             if ([value isKindOfClass:[RACTuple class]]) {
-                RACTupleUnpack(LookinConnectionResponseAttachment *response, Lookin_PTChannel *relatedChannel) = value;
+                RACTupleUnpack(LookinConnectionResponseAttachment *response, id<LookinChannelProtocol> relatedChannel) = value;
                 if (response.error) {
                     NSAssert(NO, @"");
                     return nil;

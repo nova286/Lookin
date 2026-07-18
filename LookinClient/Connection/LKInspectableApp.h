@@ -12,7 +12,8 @@
 #import "LookinCustomAttrModification.h"
 #import "LookinAttributesGroup.h"
 
-@class Lookin_PTChannel, LookinDisplayItemTrace, LookinInvocationRequest, LookinHierarchyInfo, LookinStaticAsyncUpdateTasksPackage, LookinStaticAsyncUpdateTask;
+@class LookinDisplayItemTrace, LookinInvocationRequest, LookinHierarchyInfo, LookinStaticAsyncUpdateTasksPackage, LookinStaticAsyncUpdateTask;
+@protocol LookinChannelProtocol;
 
 @interface LKInspectableApp : NSObject
 
@@ -20,7 +21,7 @@
 
 @property(nonatomic, strong) LookinAppInfo *appInfo;
 
-@property(nonatomic, weak) Lookin_PTChannel *channel;
+@property(nonatomic, weak) id<LookinChannelProtocol> channel;
 
 - (RACSignal *)fetchHierarchyData;
 

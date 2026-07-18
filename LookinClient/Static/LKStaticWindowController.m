@@ -159,10 +159,12 @@
             }];
         };
 
-        if (!device.authorizedType) {
-            [[LKConnectionManager.sharedInstance connectToWireless:device] subscribeNext:^(ECOChannelDeviceInfo *d) {
-                connectBlock(d);
-            }];
+		if (!device.authorizedType) {
+			[[LKConnectionManager.sharedInstance connectToWireless:device] subscribeNext:^(ECOChannelDeviceInfo *d) {
+				connectBlock(d);
+			} error:^(NSError *error) {
+				AlertErrorText(NSLocalizedString(@"Wireless Connections", nil), error.localizedDescription, CurrentKeyWindow);
+			}];
         } else {
             connectBlock(device);
         }
@@ -433,24 +435,6 @@
 - (void)_handleFreeRotation {
     BOOL boolValue = [LKPreferenceManager mainManager].freeRotation.currentBOOLValue;
     [[LKPreferenceManager mainManager].freeRotation setBOOLValue:!boolValue ignoreSubscriber:nil];
-}
-
-#pragma mark - Others
-
-- (void)_showUSBLowSpeedTipsIfNeeded {
-    if (TutorialMng.hasAlreadyShowedTipsThisLaunch || TutorialMng.USBLowSpeed) {
-        return;
-    }
-    if (!InspectingApp || InspectingApp.appInfo.isWireless || InspectingApp.appInfo.deviceType == LookinAppInfoDeviceSimulator || [LKStaticHierarchyDataSource sharedInstance].flatItems.count < 170) {
-        return;
-    }
-
-    TutorialMng.hasAlreadyShowedTipsThisLaunch = YES;
-	dispatch_async(dispatch_get_main_queue(), ^{
-		[[LKTutorialManager sharedInstance] showPopoverOfView:self.toolbarItemsMap[LKToolBarIdentifier_Reload].view text:NSLocalizedString(@"Inspecting via USB is slower than inspecting a Xcode simulator.", nil) learned:^{
-			[LKTutorialManager sharedInstance].USBLowSpeed = YES;
-		}];
-	});
 }
 
 #pragma mark - <LKAppMenuManagerDelegate>

@@ -16,7 +16,7 @@
 #import "LKServerVersionRequestor.h"
 #import "ECOChannelManager.h"
 
-static NSIndexSet * PushFrameTypeList() {
+static NSIndexSet *PushFrameTypeList(void) {
     static NSIndexSet *list;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -27,6 +27,14 @@ static NSIndexSet * PushFrameTypeList() {
 }
 
 static NSString *const LKWhiteListDevicesKey = @"LKWhiteListDevicesKey";
+static NSTimeInterval const LKWirelessAuthorizationTimeout = 30;
+
+static NSString *LKWirelessDeviceIdentifier(ECOChannelDeviceInfo *device) {
+	if (!device.uuid.length || !device.appInfo.appId.length) {
+		return nil;
+	}
+	return [NSString stringWithFormat:@"%@_%@", device.uuid, device.appInfo.appId];
+}
 
 @implementation Lookin_PTChannel (LKConnection)
 
@@ -93,7 +101,7 @@ static NSString *const LKWhiteListDevicesKey = @"LKWhiteListDevicesKey";
 @property(nonatomic, strong) NSMutableArray<ECOChannelDeviceInfo *> *connectWirelessDevices;
 @property(nonatomic, strong) NSMutableArray<ECOChannelDeviceInfo *> *notConnectWirelessDevices;
 @property(nonatomic, strong) ECOChannelManager *wirelessChannel;
-@property(nonatomic, strong) NSMutableDictionary *authStateChangedBlocks;
+@property(nonatomic, strong) NSMutableDictionary<NSString *, ECOChannelAuthStateChangedBlock> *authStateChangedBlocks;
 
 @property(nonatomic, strong) NSMutableArray<ECOChannelDeviceInfo *> *whitelistDevices;
 
@@ -173,9 +181,12 @@ static NSString *const LKWhiteListDevicesKey = @"LKWhiteListDevicesKey";
     return [[RACSignal zip:@[[self _tryToConnectAllSimulatorPorts],
                              [self _tryToConnectAllUSBDevices],
 							 [self _tryToConnectToAllWirelessDevice]]] map:^id _Nullable(RACTuple * _Nullable value) {
-		RACTupleUnpack(NSArray<Lookin_PTChannel *> *simulatorChannels, NSArray<Lookin_PTChannel *> *usbChannels, NSArray<ECOChannelDeviceInfo *> *wirelessDevices) = value;
-		NSArray *connectedChannels = [[simulatorChannels arrayByAddingObjectsFromArray:usbChannels] arrayByAddingObjectsFromArray:wirelessDevices];
-        return connectedChannels;
+			RACTupleUnpack(NSArray<Lookin_PTChannel *> *simulatorChannels, NSArray<Lookin_PTChannel *> *usbChannels, NSArray<ECOChannelDeviceInfo *> *wirelessDevices) = value;
+			NSMutableArray<id<LookinChannelProtocol>> *connectedChannels = [NSMutableArray array];
+			[connectedChannels addObjectsFromArray:simulatorChannels];
+			[connectedChannels addObjectsFromArray:usbChannels];
+			[connectedChannels addObjectsFromArray:wirelessDevices];
+	        return connectedChannels.copy;
     }];
 }
 
@@ -286,20 +297,25 @@ static NSString *const LKWhiteListDevicesKey = @"LKWhiteListDevicesKey";
 
 #pragma mark - Request
 
-- (void)pushWithType:(unsigned int)pushType data:(NSObject *)data channel:(Lookin_PTChannel *)channel {
+- (void)pushWithType:(unsigned int)pushType data:(NSObject *)data channel:(id<LookinChannelProtocol>)channel {
     if (!channel || !channel.isConnected) {
         return;
     }
     NSError *archiveError = nil;
-    dispatch_data_t payload = [[NSKeyedArchiver archivedDataWithRootObject:data requiringSecureCoding:YES error:&archiveError] createReferencingDispatchData];
+    NSData *sendData = [NSKeyedArchiver archivedDataWithRootObject:data requiringSecureCoding:YES error:&archiveError];
     if (archiveError) {
         NSAssert(NO, @"");
     }
     NSLog(@"LookinClient - pushData, type:%@", @(pushType));
-    [channel sendFrameOfType:pushType tag:0 withPayload:payload callback:nil];
+    if ([channel isKindOfClass:ECOChannelDeviceInfo.class]) {
+        [self.wirelessChannel sendPacket:sendData extraInfo:@{@"tag": @0, @"type": @(pushType)} toDevice:(ECOChannelDeviceInfo *)channel];
+    } else if ([channel isKindOfClass:Lookin_PTChannel.class]) {
+        dispatch_data_t payload = [sendData createReferencingDispatchData];
+        [(Lookin_PTChannel *)channel sendFrameOfType:pushType tag:0 withPayload:payload callback:nil];
+    }
 }
 
-- (RACSignal *)requestWithType:(unsigned int)requestType data:(NSObject *)requestData channel:(Lookin_PTChannel *)channel {
+- (RACSignal *)requestWithType:(unsigned int)requestType data:(NSObject *)requestData channel:(id<LookinChannelProtocol>)channel {
     return [RACSignal createSignal:^RACDisposable * _Nullable(id<RACSubscriber>  _Nonnull subscriber) {
         //        NSLog(@"LookinClient, level1 - will ping for request:%@, port:%@", @(type), @(channel.portNumber));
         NSTimeInterval timeoutInterval;
@@ -457,7 +473,7 @@ static NSString *const LKWhiteListDevicesKey = @"LKWhiteListDevicesKey";
 	}
 }
 
-- (void)cancelRequestWithType:(unsigned int)requestType channel:(Lookin_PTChannel *)channel {
+- (void)cancelRequestWithType:(unsigned int)requestType channel:(id<LookinChannelProtocol>)channel {
     LKConnectionRequest *activeRequest = [channel.activeRequests lookin_firstFiltered:^BOOL(LKConnectionRequest *obj) {
         return obj.type == requestType;
     }];
@@ -506,91 +522,133 @@ static NSString *const LKWhiteListDevicesKey = @"LKWhiteListDevicesKey";
 	@weakify(self);
 	// 接收到数据回调
 	self.wirelessChannel.receivedBlock = ^(ECOChannelDeviceInfo *device, NSData *data, NSDictionary *extraInfo) {
-		NSLog(@"🚀 Lookin receivedBlock device:%@", device);
-		NSNumber *tag = extraInfo[@"tag"];
-		NSNumber *type = extraInfo[@"type"];
-		LKConnectionRequest *activeRequest = [device.activeRequests lookin_firstFiltered:^BOOL(LKConnectionRequest *obj) {
-			return [@(obj.type) isEqualToNumber:type] && [@(obj.tag) isEqualToNumber:tag];
-		}];
-		if (!activeRequest) {
-			// 也许在 shouldAcceptFrameOfType 和 didReceiveFrame 两个时机之间，该 request 因为超时而被销毁了？有点玄学但确实偶尔会走到这里。
-			return;
-		}
-		[self_weak_ _didReceiveDataWithChannel:device data:data activeRequest:activeRequest];
+		dispatch_async(dispatch_get_main_queue(), ^{
+			@strongify(self);
+			NSNumber *tag = [extraInfo[@"tag"] isKindOfClass:NSNumber.class] ? extraInfo[@"tag"] : nil;
+			NSNumber *type = [extraInfo[@"type"] isKindOfClass:NSNumber.class] ? extraInfo[@"type"] : nil;
+			if (!tag || !type) {
+				return;
+			}
+			LKConnectionRequest *activeRequest = [device.activeRequests lookin_firstFiltered:^BOOL(LKConnectionRequest *obj) {
+				return [@(obj.type) isEqualToNumber:type] && [@(obj.tag) isEqualToNumber:tag];
+			}];
+			if (!activeRequest) {
+				// 请求可能在数据到达前已超时。
+				return;
+			}
+			[self _didReceiveDataWithChannel:device data:data activeRequest:activeRequest];
+		});
 	};
 	// 设备连接变更
 	self.wirelessChannel.deviceBlock = ^(ECOChannelDeviceInfo *device, BOOL isConnected) {
-		NSLog(@"🚀 Lookin deviceBlock device:%@", device);
-		if (isConnected && ![self_weak_.connectWirelessDevices containsObject:device]) {
-			if (!device.authorizedType && ![self_weak_ isWhiteListDevice:device]) {
-				if (![self_weak_.notConnectWirelessDevices containsObject:device]) {
-					[self_weak_.notConnectWirelessDevices addObject:device];
+		dispatch_async(dispatch_get_main_queue(), ^{
+			@strongify(self);
+			if (isConnected && ![self.connectWirelessDevices containsObject:device]) {
+				if (!device.authorizedType && ![self isWhiteListDevice:device]) {
+					if (![self.notConnectWirelessDevices containsObject:device]) {
+						[self.notConnectWirelessDevices addObject:device];
+					}
+				} else {
+					[[self _connectToWirelessDevice:device] subscribeNext:^(__unused ECOChannelDeviceInfo *connectedDevice) {
+					} error:^(__unused NSError *error) {
+					}];
 				}
-			} else {
-				RACSignal *signal = [self_weak_ _connectToWirelessDevice:device];
-				[signal subscribeNext:^(ECOChannelDeviceInfo * _Nullable x) {
-					NSLog(@"%@", x);
-				}];
+			} else if (!isConnected) {
+				[self.notConnectWirelessDevices removeObject:device];
+				[self.connectWirelessDevices removeObject:device];
+				[self.channelWillEnd sendNext:device];
 			}
-		} else if (!isConnected) {
-			[self_weak_.notConnectWirelessDevices removeObject:device];
-			[self_weak_.connectWirelessDevices removeObject:device];
-			[self_weak_.channelWillEnd sendNext:device];
-		}
+		});
 	};
 	// 授权状态变更回调
 	self.wirelessChannel.authStateChangedBlock = ^(ECOChannelDeviceInfo *device, ECOAuthorizeResponseType authState) {
-		NSLog(@"🚀 Lookin authStateChangedBlock device:%@", device);
-		void(^block)(ECOChannelDeviceInfo *device, ECOAuthorizeResponseType authState) = self_weak_.authStateChangedBlocks[@(device.hash)];
-		if (block) {
-			block(device, authState);
-		} else if (authState && [self_weak_ isWhiteListDevice:device] && ![self_weak_.connectWirelessDevices containsObject:device]) {
-			[[self_weak_ _tryToConnectToWirelessDevice:device] subscribeNext:^(ECOChannelDeviceInfo * _Nullable x) {
-				NSLog(@"🚀 Lookin auto connect white list device success. device:%@", x);
-            }];
-		}
-		if (!authState && [self_weak_.connectWirelessDevices containsObject:device]) {
-			[self_weak_.connectWirelessDevices removeObject:device];
-			[self_weak_.channelWillEnd sendNext:device];
-		}
-	};
-	// 请求授权状态认证回调
-	self.wirelessChannel.requestAuthBlock = ^(ECOChannelDeviceInfo *device, ECOAuthorizeResponseType authState) {
-		NSLog(@"🚀 Lookin requestAuthBlock device:%@ authState:%ld", device, authState);
+		dispatch_async(dispatch_get_main_queue(), ^{
+			@strongify(self);
+			NSString *identifier = LKWirelessDeviceIdentifier(device);
+			ECOChannelAuthStateChangedBlock block = identifier.length ? self.authStateChangedBlocks[identifier] : nil;
+			if (block) {
+				block(device, authState);
+			} else if (authState && [self isWhiteListDevice:device] && ![self.connectWirelessDevices containsObject:device]) {
+				[[self _tryToConnectToWirelessDevice:device] subscribeNext:^(__unused ECOChannelDeviceInfo *connectedDevice) {
+				} error:^(__unused NSError *error) {
+				}];
+			}
+			if (!authState && [self.connectWirelessDevices containsObject:device]) {
+				[self.connectWirelessDevices removeObject:device];
+				[self.channelWillEnd sendNext:device];
+			}
+		});
 	};
 }
 
 - (RACSignal<ECOChannelDeviceInfo *> *)_tryToConnectToWirelessDevice:(ECOChannelDeviceInfo *)device {
-	if (!device.isConnected)
-		return [RACSignal error:LookinErr_Inner];
+	if (!device.isConnected) {
+		NSError *error = [NSError errorWithDomain:LookinErrorDomain code:LookinErrCode_Inner userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Wireless device disconnected.", nil)}];
+		return [RACSignal error:error];
+	}
+
+	NSString *identifier = LKWirelessDeviceIdentifier(device);
+	if (!identifier.length) {
+		NSError *error = [NSError errorWithDomain:LookinErrorDomain code:LookinErrCode_Inner userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Wireless device identity is invalid.", nil)}];
+		return [RACSignal error:error];
+	}
 
 	if (!device.authorizedType) {
 		// 未信任
 		@weakify(self);
-		RACSignal *signal = [[RACSignal createSignal:^RACDisposable * _Nullable(id<RACSubscriber>  _Nonnull subscriber) {
-			self_weak_.authStateChangedBlocks[@(device.hash)] = ^(ECOChannelDeviceInfo *device, ECOAuthorizeResponseType authState) {
+		RACSignal *authorizationSignal = [RACSignal createSignal:^RACDisposable * _Nullable(id<RACSubscriber>  _Nonnull subscriber) {
+			@strongify(self);
+			if (self.authStateChangedBlocks[identifier]) {
+				NSError *error = [NSError errorWithDomain:LookinErrorDomain code:LookinErrCode_Inner userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"A wireless connection request is already in progress.", nil)}];
+				[subscriber sendError:error];
+				return nil;
+			}
+
+			__weak ECOChannelAuthStateChangedBlock weakCallback = nil;
+			ECOChannelAuthStateChangedBlock callback = nil;
+			callback = [^(ECOChannelDeviceInfo *authorizedDevice, ECOAuthorizeResponseType authState) {
+				ECOChannelAuthStateChangedBlock currentCallback = self.authStateChangedBlocks[identifier];
+				if (currentCallback != weakCallback) {
+					return;
+				}
+				[self.authStateChangedBlocks removeObjectForKey:identifier];
 				if (authState) {
-					[subscriber sendNext:device];
+					[subscriber sendNext:authorizedDevice];
 					[subscriber sendCompleted];
-                    NSLog(@"🚀 Lookin connect device success. device:%@", device);
 				} else {
-                    NSError *error = [NSError errorWithDomain:LookinErrorDomain code:LookinErrCode_Inner userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Wireless Connection rejected", nil)}];
-                    NSLog(@"🚀 Lookin connect reject. device:%@", device);
-                    dispatch_async(dispatch_get_main_queue(),  ^{
-                        AlertErrorText(NSLocalizedString(@"Wireless Connections", nil), NSLocalizedString(@"Wireless Connection rejected", nil), CurrentKeyWindow);
-                    });
+					NSError *error = [NSError errorWithDomain:LookinErrorDomain code:LookinErrCode_Inner userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Wireless Connection rejected", nil)}];
 					[subscriber sendError:error];
 				}
-			};
-			return nil;
-		}] flattenMap:^__kindof RACSignal * _Nullable(ECOChannelDeviceInfo *device) {
-			return [self_weak_ _connectToWirelessDevice:device];
+			} copy];
+			weakCallback = callback;
+			self.authStateChangedBlocks[identifier] = callback;
+
+			BOOL showAuthorizationAlert = ![self.wirelessChannel.whitelistDevices containsObject:identifier];
+			[self.wirelessChannel sendAuthorizationMessageToDevice:device
+											 state:ECOAuthorizeResponseType_AllowAlways
+									 showAuthAlert:showAuthorizationAlert];
+
+			dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(LKWirelessAuthorizationTimeout * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+				ECOChannelAuthStateChangedBlock currentCallback = self.authStateChangedBlocks[identifier];
+				if (currentCallback != callback) {
+					return;
+				}
+				[self.authStateChangedBlocks removeObjectForKey:identifier];
+				NSError *error = [NSError errorWithDomain:LookinErrorDomain code:LookinErrCode_Inner userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Wireless connection timed out.", nil)}];
+				[subscriber sendError:error];
+			});
+
+			return [RACDisposable disposableWithBlock:^{
+				dispatch_async(dispatch_get_main_queue(), ^{
+					if (self.authStateChangedBlocks[identifier] == callback) {
+						[self.authStateChangedBlocks removeObjectForKey:identifier];
+					}
+				});
+			}];
 		}];
-		NSString *uniId = [NSString stringWithFormat:@"%@_%@",device.uuid, device.appInfo.appId];
-		[self.wirelessChannel sendAuthorizationMessageToDevice:device
-														 state:ECOAuthorizeResponseType_AllowAlways
-												 showAuthAlert:![self.wirelessChannel.whitelistDevices containsObject:uniId]];
-		return signal;
+		return [authorizationSignal flattenMap:^__kindof RACSignal * _Nullable(ECOChannelDeviceInfo *authorizedDevice) {
+			return [self_weak_ _connectToWirelessDevice:authorizedDevice];
+		}];
 	} else {
 		return [self _connectToWirelessDevice:device];
 	}

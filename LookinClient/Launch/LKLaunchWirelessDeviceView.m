@@ -112,18 +112,18 @@
 	}
 	self.titleLabel.stringValue = [NSString stringWithFormat:@"%@ - %@(%@.%@)", device.deviceName, device.appInfo.appName, device.appInfo.appVersion, device.appInfo.appShortVersion];
 	self.subtitleLabel.stringValue = [NSString stringWithFormat:@"iOS %@", device.systemVersion];
-	self.stateLabel.stringValue = device.authorizedType ? @"已连接" : @"点击连接";
+	self.stateLabel.stringValue = device.authorizedType ? NSLocalizedString(@"Connected", nil) : NSLocalizedString(@"Click to connect", nil);
 
 	self.autoConnectControl.hidden = device.authorizedType != ECOAuthorizeResponseType_AllowAlways;
-	self.autoConnectControl.label.stringValue = @"自动连接";
+	self.autoConnectControl.label.stringValue = NSLocalizedString(@"Connect automatically", nil);
 	BOOL isWhiteDevice = [LKConnectionManager.sharedInstance isWhiteListDevice:device];
-	self.autoConnectControl.rightImage = [NSImage imageWithSystemSymbolName:isWhiteDevice ? @"checkmark.square" : @"square" accessibilityDescription:nil];
+	self.autoConnectControl.rightImage = [NSImage imageWithSystemSymbolName:isWhiteDevice ? @"checkmark.square" : @"square" accessibilityDescription:NSLocalizedString(@"Connect automatically", nil)];
 }
 
 - (void)handleAutoConnectControl {
 	BOOL isWhiteDevice = [LKConnectionManager.sharedInstance isWhiteListDevice:self.device];
 	isWhiteDevice = !isWhiteDevice;
-	self.autoConnectControl.rightImage = [NSImage imageWithSystemSymbolName:isWhiteDevice ? @"checkmark.square" : @"square" accessibilityDescription:nil];
+	self.autoConnectControl.rightImage = [NSImage imageWithSystemSymbolName:isWhiteDevice ? @"checkmark.square" : @"square" accessibilityDescription:NSLocalizedString(@"Connect automatically", nil)];
 	[LKConnectionManager.sharedInstance setWhiteListDevice:self.device white:isWhiteDevice];
 }
 

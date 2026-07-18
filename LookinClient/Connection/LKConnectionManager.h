@@ -38,9 +38,9 @@
 /// 该方法不会 sendError
 - (RACSignal *)tryToConnectAllPorts;
 
-/// 返回的 data 为 RACTuple<LookinConnectionResponseAttachment *, Lookin_PTChannel *>
+/// 返回的 data 为 RACTuple<LookinConnectionResponseAttachment *, id<LookinChannelProtocol>>
 /// 在调用该方法发请求时，如果已有相同 type 的旧 request 尚未返回结果，则之前的旧 request 会被报告 Error，然后被丢弃
-- (RACSignal *)requestWithType:(unsigned int)requestType data:(NSObject *)requestData channel:(Lookin_PTChannel *)channel;
+- (RACSignal *)requestWithType:(unsigned int)requestType data:(NSObject *)requestData channel:(id<LookinChannelProtocol>)channel;
 
 - (RACSignal<ECOChannelDeviceInfo *> *)connectToWireless:(ECOChannelDeviceInfo *)device;
 
@@ -51,11 +51,11 @@
 - (void)setWhiteListDevice:(ECOChannelDeviceInfo *)device white:(BOOL)white;
 
 /// 取消先前使用 requestWithType:data:channel: 方法发送的尚未完成的 request，这个 request 会被报告为 completion
-- (void)cancelRequestWithType:(unsigned int)requestType channel:(Lookin_PTChannel *)channel;
+- (void)cancelRequestWithType:(unsigned int)requestType channel:(id<LookinChannelProtocol>)channel;
 
 /// 如果发送的消息不需要 server 端回复，则请使用该方法而非 requestWithType:
 /// 如果此时 server 端不在前台或处于断点等模式，则 server 端可能无法收到该消息
-- (void)pushWithType:(unsigned int)pushType data:(NSObject *)requestData channel:(Lookin_PTChannel *)channel;
+- (void)pushWithType:(unsigned int)pushType data:(NSObject *)requestData channel:(id<LookinChannelProtocol>)channel;
 
 /// 即将关闭某个 channel，一般是因为 server 端断开（比如 iOS app 被 kill 掉或 USB 被拔掉）
 @property(nonatomic, strong, readonly) RACSubject *channelWillEnd;
