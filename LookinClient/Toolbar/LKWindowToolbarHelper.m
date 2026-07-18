@@ -28,6 +28,7 @@ NSToolbarItemIdentifier const LKToolBarIdentifier_Rotation = @"16";
 NSToolbarItemIdentifier const LKToolBarIdentifier_Measure = @"17";
 NSToolbarItemIdentifier const LKToolBarIdentifier_Message = @"18";
 NSToolbarItemIdentifier const LKToolBarIdentifier_FastMode = @"19";
+NSToolbarItemIdentifier const LKToolBarIdentifier_SwiftUI = @"20";
 
 
 static NSString * const Key_BindingPreferenceManager = @"PreferenceManager";
@@ -225,6 +226,18 @@ static NSString * const Key_BindingAppInfo = @"AppInfo";
         item.minSize = NSMakeSize(60, 34);
         
         [manager.fastMode subscribe:self action:@selector(_handleFastModeDidChange:) relatedObject:button sendAtOnce:YES];
+        return item;
+    }
+
+    if ([identifier isEqualToString:LKToolBarIdentifier_SwiftUI]) {
+        NSButton *button = [NSButton buttonWithTitle:@"SwiftUI" target:nil action:nil];
+        button.bezelStyle = NSBezelStyleTexturedRounded;
+        [button setButtonType:NSButtonTypePushOnPushOff];
+
+        NSToolbarItem *item = [[NSToolbarItem alloc] initWithItemIdentifier:LKToolBarIdentifier_SwiftUI];
+        item.label = @"SwiftUI";
+        item.view = button;
+        item.minSize = NSMakeSize(62, 34);
         return item;
     }
     

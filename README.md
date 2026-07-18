@@ -19,6 +19,23 @@ Never integrate LookinServer in Release building configuration.
 ## via Swift Package Manager:
 `https://github.com/QMUI/LookinServer/`
 
+## Experimental SwiftUI inspector
+
+This fork pairs with the `codex/swiftui-attached-macro` branch of [nova286/LookinServer](https://github.com/nova286/LookinServer). When the inspected app exposes SwiftUI semantic nodes, the toolbar shows a **SwiftUI** mode with source types and source locations. Registered nodes provide editable temporary overrides for size, offset, scale, visibility, opacity, and background color. After an edit, Lookin automatically reloads the hierarchy and screenshot while preserving the selected node and expansion state.
+
+Build the client with:
+
+```bash
+pod install
+xcodebuild -workspace Lookin.xcworkspace -scheme LookinClient -configuration Debug -destination 'platform=macOS' build
+```
+
+These controls are intended only for local debugging. The matching server package must remain excluded from production app binaries.
+
+## Automated macOS builds
+
+GitHub Actions builds the Release client for every push and pull request. Every push and manual **Build Lookin Desktop** run uploads an ad-hoc signed universal app ZIP as a workflow artifact. Pushing a `v*` tag also publishes the ZIP and its SHA-256 checksum to GitHub Releases.
+
 # Repository
 LookinServer: https://github.com/QMUI/LookinServer
 
@@ -54,6 +71,23 @@ Lookin 可以查看与修改 iOS App 里的 UI 对象，类似于 Xcode 自带�
 
 ## 通过 Swift Package Manager:
 `https://github.com/QMUI/LookinServer/`
+
+## 实验性 SwiftUI Inspector
+
+此 fork 与 [nova286/LookinServer](https://github.com/nova286/LookinServer) 的 `codex/swiftui-attached-macro` 分支配套使用。被检查的 App 暴露 SwiftUI 语义节点后，工具栏会出现独立的 **SwiftUI** 模式，显示真实源码类型和源码位置。每个注册节点都提供尺寸、偏移、缩放、隐藏、透明度和背景色等临时调试属性；修改后客户端会自动重新抓取层级与截图，并保留当前选中节点和展开状态。
+
+客户端构建命令：
+
+```bash
+pod install
+xcodebuild -workspace Lookin.xcworkspace -scheme LookinClient -configuration Debug -destination 'platform=macOS' build
+```
+
+这些能力只用于本地调试，配套 Server 包必须继续从生产 App 二进制中排除。
+
+## 自动构建 macOS 客户端
+
+GitHub Actions 会为每次 push 和 pull request 构建 Release 客户端。每次 push 和手动运行 **Build Lookin Desktop** 都会上传经过 ad-hoc 签名的通用架构 App ZIP。推送 `v*` tag 时，还会把 ZIP 和 SHA-256 校验文件发布到 GitHub Releases。
 
 # 源代码仓库
 

@@ -25,6 +25,8 @@ typedef NS_ENUM(NSUInteger, LKHierarchyDataSourceState) {
  如果 keepState 为 YES，则会尽量维持刷新之前的折叠状态和选中态
  */
 - (void)reloadWithHierarchyInfo:(LookinHierarchyInfo *)info keepState:(BOOL)keepState;
+/// Subclass hook for presenting an alternate root hierarchy without mutating rawHierarchyInfo.
+- (NSArray<LookinDisplayItem *> *)hierarchyRootItemsForInfo:(LookinHierarchyInfo *)info;
 @property(nonatomic, strong, readonly) RACSubject *willReloadHierarchyInfo;
 @property(nonatomic, strong, readonly) RACSubject *didReloadHierarchyInfo;
 

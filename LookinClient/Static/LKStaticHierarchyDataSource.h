@@ -16,6 +16,8 @@
 + (instancetype)sharedInstance;
 
 @property(nonatomic, strong, readonly) LookinAppInfo *appInfo;
+@property(nonatomic, assign, readonly) BOOL swiftUISemanticHierarchyAvailable;
+@property(nonatomic, assign) BOOL showsSwiftUISemanticHierarchy;
 
 #pragma mark - Signal
 
