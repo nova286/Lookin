@@ -58,6 +58,19 @@
 #pragma mark - Public
 
 - (void)reloadWithHierarchyInfo:(LookinHierarchyInfo *)info keepState:(BOOL)keepState {
+    NSString *selectedSemanticIdentifier = nil;
+    NSMutableDictionary<NSString *, NSNumber *> *semanticExpansionState = nil;
+    if (keepState && self.showsSwiftUISemanticHierarchy) {
+        selectedSemanticIdentifier = self.selectedItem.customInfo.semanticIdentifier;
+        semanticExpansionState = [NSMutableDictionary dictionary];
+        [self.flatItems enumerateObjectsUsingBlock:^(LookinDisplayItem *item, NSUInteger idx, BOOL *stop) {
+            NSString *identifier = item.customInfo.semanticIdentifier;
+            if (identifier.length > 0) {
+                semanticExpansionState[identifier] = @(item.isExpanded);
+            }
+        }];
+    }
+
     NSArray<LookinDisplayItem *> *allItems = [LookinDisplayItem flatItemsFromHierarchicalItems:info.displayItems];
     LookinDisplayItem *semanticRoot = [allItems lookin_firstFiltered:^BOOL(LookinDisplayItem *item) {
         return [item.customInfo.semanticKind isEqualToString:@"swiftui-root"];
@@ -72,6 +85,28 @@
     }
 
     [super reloadWithHierarchyInfo:info keepState:keepState];
+
+    if (semanticExpansionState.count > 0) {
+        [self.flatItems enumerateObjectsUsingBlock:^(LookinDisplayItem *item, NSUInteger idx, BOOL *stop) {
+            NSString *identifier = item.customInfo.semanticIdentifier;
+            if (identifier.length == 0) {
+                return;
+            }
+            NSNumber *wasExpanded = semanticExpansionState[identifier];
+            if (wasExpanded) {
+                item.isExpanded = wasExpanded.boolValue;
+            }
+        }];
+        [self buildDisplayingFlatItems];
+    }
+    if (selectedSemanticIdentifier.length > 0) {
+        LookinDisplayItem *matchingItem = [self.flatItems lookin_firstFiltered:^BOOL(LookinDisplayItem *item) {
+            return [item.customInfo.semanticIdentifier isEqualToString:selectedSemanticIdentifier];
+        }];
+        if (matchingItem) {
+            self.selectedItem = matchingItem;
+        }
+    }
     
     _appInfo = info.appInfo;
     

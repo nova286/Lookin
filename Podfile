@@ -7,7 +7,7 @@ target 'LookinClient' do
     pod 'AppCenter'
     pod 'ReactiveObjC', '3.1.0'
     pod 'Sparkle', '~> 1.0'
-    pod 'LookinShared', :git=>'https://github.com/nova286/LookinServer.git', :commit => '04c9a80ca5f3fc24366aa9fb50cde71bf0978a67'
+    pod 'LookinShared', :git=>'https://github.com/nova286/LookinServer.git', :commit => '4904f46636815041cd151f8ecd96cc99bd380501'
     #pod 'LookinShared', :path=>'../LookinServer/'
 end
 

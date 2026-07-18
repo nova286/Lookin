@@ -23,6 +23,7 @@
 #import "LKDashboardSearchMethodsView.h"
 #import "LKDashboardSearchMethodsDataSource.h"
 #import "LookinCustomAttrModification.h"
+#import "LookinCustomDisplayItemInfo.h"
 #import "LKDashboardTextControlEditingFlag.h"
 @import AppCenter;
 @import AppCenterAnalytics;
@@ -247,11 +248,38 @@
             return nil;
         }
         
+        BOOL shouldRefreshSwiftUIHierarchy = self.staticDataSource &&
+            [attribute.targetDisplayItem.customInfo.semanticKind hasPrefix:@"swiftui-"];
         @weakify(self);
         [[[LKAppsManager sharedInstance].inspectingApp submitCustomModification:modification] subscribeNext:^(id ret) {
             NSLog(@"custom modification - succ");
             attribute.value = newValue;
-            [subscriber sendNext:nil];
+
+            if (!shouldRefreshSwiftUIHierarchy) {
+                [subscriber sendNext:nil];
+                return;
+            }
+
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.15 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                @strongify(self);
+                LKInspectableApp *app = [LKAppsManager sharedInstance].inspectingApp;
+                if (!self || !app) {
+                    AlertError(LookinErr_NoConnect, self.view.window);
+                    [subscriber sendError:LookinErr_NoConnect];
+                    return;
+                }
+
+                [[[app fetchHierarchyData] deliverOnMainThread] subscribeNext:^(LookinHierarchyInfo *info) {
+                    LKDashboardTextControlEditingFlag.sharedInstance.shouldIgnoreTextEditingChangeEvent = YES;
+                    [self.staticDataSource reloadWithHierarchyInfo:info keepState:YES];
+                    LKDashboardTextControlEditingFlag.sharedInstance.shouldIgnoreTextEditingChangeEvent = NO;
+                    [subscriber sendNext:nil];
+
+                } error:^(NSError *error) {
+                    AlertError(error, self.view.window);
+                    [subscriber sendError:error];
+                }];
+            });
 
         } error:^(NSError * _Nullable error) {
             @strongify(self);
