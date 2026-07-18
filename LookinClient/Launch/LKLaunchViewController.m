@@ -296,16 +296,12 @@
             }];
         };
 
-		if (!device.authorizedType) {
-			[[LKConnectionManager.sharedInstance connectToWireless:device] subscribeNext:^(ECOChannelDeviceInfo *d) {
-				connectBlock(d);
-			} error:^(NSError *error) {
-				AlertErrorText(NSLocalizedString(@"Wireless Connections", nil), error.localizedDescription, CurrentKeyWindow);
-			}];
-        } else {
-            connectBlock(device);
-        }
-    };
+		[[LKConnectionManager.sharedInstance connectToWireless:device] subscribeNext:^(ECOChannelDeviceInfo *d) {
+			connectBlock(d);
+		} error:^(NSError *error) {
+			AlertErrorText(NSLocalizedString(@"Wireless Connections", nil), error.localizedDescription, CurrentKeyWindow);
+		}];
+	};
     popover.behavior = NSPopoverBehaviorTransient;
     popover.animates = NO;
     popover.contentSize = vc.bestSize;

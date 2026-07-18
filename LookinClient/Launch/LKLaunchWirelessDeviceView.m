@@ -58,6 +58,7 @@
 		_iconMarginRight = 6;
 		self.titleLabel.font = NSFontMake(12);
 		self.subtitleLabel.font = NSFontMake(11);
+		self.stateLabel.font = NSFontMake(11);
 
 		[self.autoConnectControl addTarget:self clickAction:@selector(handleAutoConnectControl)];
 	}
@@ -69,20 +70,28 @@
 
 	self.hoverBgLayer.frame = self.layer.bounds;
 
-	$(self.iconImageView).sizeToFit.y(_insets.top);
+	$(self.iconImageView).sizeToFit.x(_insets.left).y(_insets.top);
 
 	$(self.titleLabel).sizeToFit;
 	$(self.subtitleLabel).sizeToFit.y(self.titleLabel.$maxY + 2);
 	$(self.titleLabel, self.subtitleLabel).x(self.iconImageView.$maxX + _iconMarginRight).groupMidY(self.iconImageView.$midY);
 
-	$(self.autoConnectControl).sizeToFit.maxX(self.$maxX - _insets.right - 10).midY(self.subtitleLabel.$midY);
-	$(self.stateLabel).sizeToFit.maxX(self.autoConnectControl.hidden ? self.autoConnectControl.$maxX : self.autoConnectControl.$x - 6).midY(self.subtitleLabel.$midY);
-
-	$(self.iconImageView, self.titleLabel, self.subtitleLabel).groupHorAlign.offsetX(-2);
+	CGFloat trailingX = self.$width - _insets.right;
+	if (self.autoConnectControl.hidden) {
+		$(self.stateLabel).sizeToFit.maxX(trailingX).midY(self.iconImageView.$midY);
+	} else {
+		$(self.autoConnectControl).sizeToFit.maxX(trailingX).midY(self.iconImageView.$midY);
+		$(self.stateLabel).sizeToFit.maxX(self.autoConnectControl.$x - 8).midY(self.iconImageView.$midY);
+	}
 }
 
 - (NSSize)sizeThatFits:(NSSize)limitedSize {
-	CGFloat width = self.iconImageView.image.size.width + _iconMarginRight + MAX([self.titleLabel sizeThatFits:NSSizeMax].width, [self.subtitleLabel sizeThatFits:NSSizeMax].width) + _insets.left + _insets.right;
+	CGFloat labelsWidth = MAX([self.titleLabel sizeThatFits:NSSizeMax].width, [self.subtitleLabel sizeThatFits:NSSizeMax].width);
+	CGFloat trailingWidth = [self.stateLabel sizeThatFits:NSSizeMax].width;
+	if (!self.autoConnectControl.hidden) {
+		trailingWidth += 8 + [self.autoConnectControl sizeThatFits:NSSizeMax].width;
+	}
+	CGFloat width = _insets.left + self.iconImageView.image.size.width + _iconMarginRight + labelsWidth + 16 + trailingWidth + _insets.right;
 	CGFloat height = _insets.top + self.iconImageView.image.size.height + _insets.bottom;
 	return NSMakeSize(width, height);
 }
@@ -110,14 +119,27 @@
 	default:
 		break;
 	}
-	self.titleLabel.stringValue = [NSString stringWithFormat:@"%@ - %@(%@.%@)", device.deviceName, device.appInfo.appName, device.appInfo.appVersion, device.appInfo.appShortVersion];
+	self.titleLabel.stringValue = [NSString stringWithFormat:@"%@ - %@", device.deviceName, device.appInfo.appName];
 	self.subtitleLabel.stringValue = [NSString stringWithFormat:@"iOS %@", device.systemVersion];
 	self.stateLabel.stringValue = device.authorizedType ? NSLocalizedString(@"Connected", nil) : NSLocalizedString(@"Click to connect", nil);
+	self.stateLabel.textColor = device.authorizedType ? [NSColor secondaryLabelColor] : [NSColor linkColor];
 
 	self.autoConnectControl.hidden = device.authorizedType != ECOAuthorizeResponseType_AllowAlways;
 	self.autoConnectControl.label.stringValue = NSLocalizedString(@"Connect automatically", nil);
 	BOOL isWhiteDevice = [LKConnectionManager.sharedInstance isWhiteListDevice:device];
 	self.autoConnectControl.rightImage = [NSImage imageWithSystemSymbolName:isWhiteDevice ? @"checkmark.square" : @"square" accessibilityDescription:NSLocalizedString(@"Connect automatically", nil)];
+	[self setNeedsLayout:YES];
+}
+
+- (NSView *)hitTest:(NSPoint)point {
+	NSView *hitView = [super hitTest:point];
+	if (!hitView) {
+		return nil;
+	}
+	if (!self.autoConnectControl.hidden && (hitView == self.autoConnectControl || [hitView isDescendantOf:self.autoConnectControl])) {
+		return self.autoConnectControl;
+	}
+	return self;
 }
 
 - (void)handleAutoConnectControl {

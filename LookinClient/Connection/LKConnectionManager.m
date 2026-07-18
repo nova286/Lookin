@@ -60,6 +60,17 @@ static NSString *LKWirelessDeviceIdentifier(ECOChannelDeviceInfo *device) {
 
 @end
 
+@interface LKWirelessAuthorizationRequest : NSObject
+
+@property(nonatomic, strong) ECOChannelDeviceInfo *device;
+@property(nonatomic, strong) id<RACSubscriber> subscriber;
+
+@end
+
+@implementation LKWirelessAuthorizationRequest
+
+@end
+
 @interface LKSimulatorConnectionPort : NSObject
 
 @property(nonatomic, assign) int portNumber;
@@ -101,7 +112,7 @@ static NSString *LKWirelessDeviceIdentifier(ECOChannelDeviceInfo *device) {
 @property(nonatomic, strong) NSMutableArray<ECOChannelDeviceInfo *> *connectWirelessDevices;
 @property(nonatomic, strong) NSMutableArray<ECOChannelDeviceInfo *> *notConnectWirelessDevices;
 @property(nonatomic, strong) ECOChannelManager *wirelessChannel;
-@property(nonatomic, strong) NSMutableDictionary<NSString *, ECOChannelAuthStateChangedBlock> *authStateChangedBlocks;
+@property(nonatomic, strong) NSMutableDictionary<NSString *, LKWirelessAuthorizationRequest *> *pendingWirelessAuthorizationRequests;
 
 @property(nonatomic, strong) NSMutableArray<ECOChannelDeviceInfo *> *whitelistDevices;
 
@@ -139,7 +150,7 @@ static NSString *LKWirelessDeviceIdentifier(ECOChannelDeviceInfo *device) {
         self.allUSBPorts = [NSMutableArray array];
 		self.connectWirelessDevices = [NSMutableArray array];
 		self.notConnectWirelessDevices = [NSMutableArray array];
-		self.authStateChangedBlocks = [NSMutableDictionary dictionary];
+		self.pendingWirelessAuthorizationRequests = [NSMutableDictionary dictionary];
 
 		[self _startListeningForWirelessDevices];
         [self _startListeningForUSBDevices];
@@ -550,12 +561,25 @@ static NSString *LKWirelessDeviceIdentifier(ECOChannelDeviceInfo *device) {
 					}
 				} else {
 					[[self _connectToWirelessDevice:device] subscribeNext:^(__unused ECOChannelDeviceInfo *connectedDevice) {
-					} error:^(__unused NSError *error) {
+					} error:^(NSError *error) {
+						if (device.isConnected && ![self.notConnectWirelessDevices containsObject:device]) {
+							[self.notConnectWirelessDevices addObject:device];
+						}
+						NSLog(@"Lookin - wireless device ping failed: %@", error);
 					}];
 				}
 			} else if (!isConnected) {
 				[self.notConnectWirelessDevices removeObject:device];
 				[self.connectWirelessDevices removeObject:device];
+				NSString *identifier = LKWirelessDeviceIdentifier(device);
+				LKWirelessAuthorizationRequest *request = identifier.length ? self.pendingWirelessAuthorizationRequests[identifier] : nil;
+				if (request && request.device == device) {
+					[self.pendingWirelessAuthorizationRequests removeObjectForKey:identifier];
+					id<RACSubscriber> subscriber = request.subscriber;
+					request.subscriber = nil;
+					NSError *error = [NSError errorWithDomain:LookinErrorDomain code:LookinErrCode_Inner userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Wireless device disconnected.", nil)}];
+					[subscriber sendError:error];
+				}
 				[self.channelWillEnd sendNext:device];
 			}
 		});
@@ -565,12 +589,25 @@ static NSString *LKWirelessDeviceIdentifier(ECOChannelDeviceInfo *device) {
 		dispatch_async(dispatch_get_main_queue(), ^{
 			@strongify(self);
 			NSString *identifier = LKWirelessDeviceIdentifier(device);
-			ECOChannelAuthStateChangedBlock block = identifier.length ? self.authStateChangedBlocks[identifier] : nil;
-			if (block) {
-				block(device, authState);
+			LKWirelessAuthorizationRequest *request = identifier.length ? self.pendingWirelessAuthorizationRequests[identifier] : nil;
+			if (request && request.device == device) {
+				[self.pendingWirelessAuthorizationRequests removeObjectForKey:identifier];
+				id<RACSubscriber> subscriber = request.subscriber;
+				request.subscriber = nil;
+				if (authState) {
+					[subscriber sendNext:device];
+					[subscriber sendCompleted];
+				} else {
+					NSError *error = [NSError errorWithDomain:LookinErrorDomain code:LookinErrCode_Inner userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Wireless Connection rejected", nil)}];
+					[subscriber sendError:error];
+				}
 			} else if (authState && [self isWhiteListDevice:device] && ![self.connectWirelessDevices containsObject:device]) {
 				[[self _tryToConnectToWirelessDevice:device] subscribeNext:^(__unused ECOChannelDeviceInfo *connectedDevice) {
-				} error:^(__unused NSError *error) {
+				} error:^(NSError *error) {
+					if (device.isConnected && ![self.notConnectWirelessDevices containsObject:device]) {
+						[self.notConnectWirelessDevices addObject:device];
+					}
+					NSLog(@"Lookin - trusted wireless device reconnect failed: %@", error);
 				}];
 			}
 			if (!authState && [self.connectWirelessDevices containsObject:device]) {
@@ -598,30 +635,18 @@ static NSString *LKWirelessDeviceIdentifier(ECOChannelDeviceInfo *device) {
 		@weakify(self);
 		RACSignal *authorizationSignal = [RACSignal createSignal:^RACDisposable * _Nullable(id<RACSubscriber>  _Nonnull subscriber) {
 			@strongify(self);
-			if (self.authStateChangedBlocks[identifier]) {
-				NSError *error = [NSError errorWithDomain:LookinErrorDomain code:LookinErrCode_Inner userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"A wireless connection request is already in progress.", nil)}];
-				[subscriber sendError:error];
-				return nil;
+			LKWirelessAuthorizationRequest *previousRequest = self.pendingWirelessAuthorizationRequests[identifier];
+			if (previousRequest) {
+				[self.pendingWirelessAuthorizationRequests removeObjectForKey:identifier];
+				id<RACSubscriber> previousSubscriber = previousRequest.subscriber;
+				previousRequest.subscriber = nil;
+				[previousSubscriber sendCompleted];
 			}
 
-			__weak ECOChannelAuthStateChangedBlock weakCallback = nil;
-			ECOChannelAuthStateChangedBlock callback = nil;
-			callback = [^(ECOChannelDeviceInfo *authorizedDevice, ECOAuthorizeResponseType authState) {
-				ECOChannelAuthStateChangedBlock currentCallback = self.authStateChangedBlocks[identifier];
-				if (currentCallback != weakCallback) {
-					return;
-				}
-				[self.authStateChangedBlocks removeObjectForKey:identifier];
-				if (authState) {
-					[subscriber sendNext:authorizedDevice];
-					[subscriber sendCompleted];
-				} else {
-					NSError *error = [NSError errorWithDomain:LookinErrorDomain code:LookinErrCode_Inner userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Wireless Connection rejected", nil)}];
-					[subscriber sendError:error];
-				}
-			} copy];
-			weakCallback = callback;
-			self.authStateChangedBlocks[identifier] = callback;
+			LKWirelessAuthorizationRequest *request = [LKWirelessAuthorizationRequest new];
+			request.device = device;
+			request.subscriber = subscriber;
+			self.pendingWirelessAuthorizationRequests[identifier] = request;
 
 			BOOL showAuthorizationAlert = ![self.wirelessChannel.whitelistDevices containsObject:identifier];
 			[self.wirelessChannel sendAuthorizationMessageToDevice:device
@@ -629,20 +654,23 @@ static NSString *LKWirelessDeviceIdentifier(ECOChannelDeviceInfo *device) {
 									 showAuthAlert:showAuthorizationAlert];
 
 			dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(LKWirelessAuthorizationTimeout * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-				ECOChannelAuthStateChangedBlock currentCallback = self.authStateChangedBlocks[identifier];
-				if (currentCallback != callback) {
+				LKWirelessAuthorizationRequest *currentRequest = self.pendingWirelessAuthorizationRequests[identifier];
+				if (currentRequest != request) {
 					return;
 				}
-				[self.authStateChangedBlocks removeObjectForKey:identifier];
+				[self.pendingWirelessAuthorizationRequests removeObjectForKey:identifier];
+				id<RACSubscriber> timeoutSubscriber = request.subscriber;
+				request.subscriber = nil;
 				NSError *error = [NSError errorWithDomain:LookinErrorDomain code:LookinErrCode_Inner userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Wireless connection timed out.", nil)}];
-				[subscriber sendError:error];
+				[timeoutSubscriber sendError:error];
 			});
 
 			return [RACDisposable disposableWithBlock:^{
 				dispatch_async(dispatch_get_main_queue(), ^{
-					if (self.authStateChangedBlocks[identifier] == callback) {
-						[self.authStateChangedBlocks removeObjectForKey:identifier];
+					if (self.pendingWirelessAuthorizationRequests[identifier] == request) {
+						[self.pendingWirelessAuthorizationRequests removeObjectForKey:identifier];
 					}
+					request.subscriber = nil;
 				});
 			}];
 		}];

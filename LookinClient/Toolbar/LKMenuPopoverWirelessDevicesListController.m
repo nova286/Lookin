@@ -114,7 +114,7 @@
 
 - (void)handleClickAppView:(LKLaunchWirelessDeviceView *)view {
 	ECOChannelDeviceInfo *device = view.device;
-	if (!device.authorizedType && self.didSelectDevice) {
+	if (self.didSelectDevice) {
 		self.didSelectDevice(device);
 	}
 }

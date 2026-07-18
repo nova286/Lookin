@@ -7,7 +7,6 @@
 "Connect automatically" = "自动连接";
 "Wireless device disconnected." = "无线设备已断开连接。";
 "Wireless device identity is invalid." = "无线设备标识无效。";
-"A wireless connection request is already in progress." = "已有一个无线连接请求正在进行。";
 "Wireless connection timed out." = "无线连接超时。";
 "View" = "图像";
 "Zoom" = "大小";
