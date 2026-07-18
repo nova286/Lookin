@@ -1,0 +1,29 @@
+{
+  "name": "lookinctl",
+  "version": "0.2.0",
+  "description": "Standalone CLI for apps that integrate LookinServer.",
+  "bin": {
+    "lookinctl": "bin/lookinctl.js"
+  },
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "arm64",
+    "x64"
+  ],
+  "files": [
+    "bin",
+    "prebuilds",
+    "LICENSE",
+    "README.md"
+  ],
+  "keywords": [
+    "lookin",
+    "ios",
+    "cli",
+    "uiautomator",
+    "screenshot"
+  ],
+  "license": "GPL-3.0-only"
+}
