@@ -15,12 +15,9 @@
   "files": [
     "bin",
     "prebuilds",
-    "scripts",
+    "LICENSE",
     "README.md"
   ],
-  "scripts": {
-    "postinstall": "node scripts/postinstall.js"
-  },
   "keywords": [
     "lookin",
     "ios",
@@ -28,5 +25,5 @@
     "uiautomator",
     "screenshot"
   ],
-  "license": "MIT"
+  "license": "GPL-3.0-only"
 }

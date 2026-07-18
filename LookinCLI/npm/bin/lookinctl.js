@@ -44,15 +44,6 @@ if (!binary) {
   process.exit(127);
 }
 
-try {
-  fs.chmodSync(binary, 0o755);
-} catch (_) {
-}
-
-if (process.platform === "darwin") {
-  spawnSync("xattr", ["-d", "com.apple.quarantine", binary], { stdio: "ignore" });
-}
-
 const result = spawnSync(binary, process.argv.slice(2), { stdio: "inherit" });
 if (result.error) {
   console.error(result.error.message);

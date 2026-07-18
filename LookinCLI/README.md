@@ -41,8 +41,12 @@ lookinctl help dump
 Published binary:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/QMUI/Lookin/master/LookinCLI/install.sh | bash
+curl -fsSLO https://raw.githubusercontent.com/nova286/Lookin/Develop/LookinCLI/install.sh
+less install.sh
+bash install.sh
 ```
+
+The installer verifies the release archive against its published SHA-256 file and checks its code signature before installation. Set `LOOKINCTL_REF` to an immutable commit when the source-build fallback must be reproducible.
 
 Local source checkout:
 
@@ -447,7 +451,7 @@ Signing behavior:
 
 - `build.sh` ad-hoc signs the binary by default and verifies it with `codesign --verify --strict`.
 - ad-hoc signing does not require a certificate and does not expire.
-- The npm wrapper and `postinstall` remove `com.apple.quarantine` from the bundled binary when possible.
+- The npm package has no install-time lifecycle script and does not remove Gatekeeper quarantine metadata.
 - If your distribution policy requires a specific signing identity, set `LOOKINCTL_CODESIGN_IDENTITY` before packaging.
 
 ```sh
@@ -508,7 +512,6 @@ LookinCLI/
     README.md                README shipped inside the npm package.
     .npmrc.example           Registry auth example.
     bin/lookinctl.js         Node wrapper that launches the bundled native binary.
-    scripts/postinstall.js   chmod, quarantine cleanup, and codesign verification.
 ```
 
 Generated artifacts are intentionally kept out of source control:
@@ -524,7 +527,7 @@ Design boundaries:
 
 - `main.m` owns command parsing, LookinServer request/response handling, adb-like output, and semantic input behavior.
 - `build.sh` owns dependency discovery, optional LookinServer source fetch, architecture selection, linking, and signing.
-- `npm/bin/lookinctl.js` stays thin: it only finds the bundled binary, prepares execution permissions, clears quarantine when possible, and forwards arguments.
+- `npm/bin/lookinctl.js` stays thin: it only finds the bundled binary and forwards arguments.
 - The npm package ships build artifacts, but this repository keeps editable source so later protocol or command changes are reviewable.
 
 ## Protocol Coverage

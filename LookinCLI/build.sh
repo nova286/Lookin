@@ -4,13 +4,18 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="${ROOT_DIR}/Build/lookinctl"
 LOOKIN_SHARED_DIR="${LOOKIN_SHARED_DIR:-${ROOT_DIR}/Pods/LookinShared}"
+LOOKIN_SERVER_REPO_URL="${LOOKIN_SERVER_REPO_URL:-https://github.com/nova286/LookinServer.git}"
+LOOKIN_SERVER_REF="${LOOKIN_SERVER_REF:-6a21883a8eb18997d6c6c9ec8ae3ad25739aca7e}"
 
 if [[ ! -d "${LOOKIN_SHARED_DIR}/Src/Main/Shared" ]]; then
-  LOOKIN_SERVER_DIR="${BUILD_DIR}/LookinServer-1.2.7"
+  LOOKIN_SERVER_DIR="${BUILD_DIR}/LookinServer-${LOOKIN_SERVER_REF:0:12}"
   if [[ ! -d "${LOOKIN_SERVER_DIR}/Src/Main/Shared" ]]; then
     rm -rf "${LOOKIN_SERVER_DIR}"
     mkdir -p "${BUILD_DIR}"
-    git clone --depth 1 --branch 1.2.7 https://github.com/QMUI/LookinServer.git "${LOOKIN_SERVER_DIR}"
+    git init --quiet "${LOOKIN_SERVER_DIR}"
+    git -C "${LOOKIN_SERVER_DIR}" remote add origin "${LOOKIN_SERVER_REPO_URL}"
+    git -C "${LOOKIN_SERVER_DIR}" fetch --depth 1 origin "${LOOKIN_SERVER_REF}"
+    git -C "${LOOKIN_SERVER_DIR}" checkout --quiet --detach FETCH_HEAD
   fi
   LOOKIN_SHARED_DIR="${LOOKIN_SERVER_DIR}"
 fi

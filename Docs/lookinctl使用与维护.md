@@ -497,7 +497,6 @@ LookinCLI/
     README.md                npm 包内 README。
     .npmrc.example           registry 配置示例。
     bin/lookinctl.js         Node 包装器，负责找到并执行原生 binary。
-    scripts/postinstall.js   安装后 chmod、清理 quarantine、校验签名。
 ```
 
 生成目录：
@@ -514,7 +513,7 @@ Build/lookinctl-npm/manifest.json   npm 产物元信息。
 - `main.m`: 命令解析、连接选择、协议请求、响应格式化、adb-like 命令和语义点击策略。
 - `build.sh`: 依赖发现、LookinServer 源码拉取、架构构建、链接、签名验证。
 - `package-npm.sh`: 构建 binary、准备 npm staging、生成 tarball、可选发布。
-- `npm/bin/lookinctl.js`: 保持轻量，只负责选择 binary、处理执行权限、清理 quarantine、透传参数。
+- `npm/bin/lookinctl.js`: 保持轻量，只负责选择 binary 和透传参数；不执行安装时脚本，也不清理 Gatekeeper quarantine。
 - `Docs/`: 放长期设计和维护文档，避免 README 变成过长的实现说明。
 
 ## 适用和不适用场景

@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_URL="${LOOKINCTL_REPO_URL:-https://github.com/QMUI/Lookin.git}"
-REF="${LOOKINCTL_REF:-master}"
-RELEASE_URL="${LOOKINCTL_RELEASE_URL:-https://github.com/QMUI/Lookin/releases/latest/download/lookinctl-macos-universal.tar.gz}"
+REPO_URL="${LOOKINCTL_REPO_URL:-https://github.com/nova286/Lookin.git}"
+REF="${LOOKINCTL_REF:-Develop}"
+RELEASE_URL="${LOOKINCTL_RELEASE_URL:-https://github.com/nova286/Lookin/releases/latest/download/lookinctl-macos-universal.tar.gz}"
+CHECKSUM_URL="${LOOKINCTL_CHECKSUM_URL:-${RELEASE_URL}.sha256}"
 INSTALL_DIR="${LOOKINCTL_INSTALL_DIR:-}"
 SCRIPT_PATH="${BASH_SOURCE[0]:-}"
 LOCAL_ROOT=""
@@ -42,14 +43,23 @@ if [[ -n "${LOCAL_ROOT}" && -x "${LOCAL_ROOT}/Build/lookinctl/lookinctl" ]]; the
   exit 0
 fi
 
-if curl -fsSL "${RELEASE_URL}" -o "${tmpdir}/lookinctl.tar.gz"; then
+archive_path="${tmpdir}/lookinctl-macos-universal.tar.gz"
+checksum_path="${archive_path}.sha256"
+
+if curl -fsSL "${RELEASE_URL}" -o "${archive_path}"; then
+  if ! curl -fsSL "${CHECKSUM_URL}" -o "${checksum_path}"; then
+    echo "Release checksum was not available at ${CHECKSUM_URL}." >&2
+    exit 1
+  fi
+  (cd "${tmpdir}" && shasum -a 256 -c "$(basename "${checksum_path}")")
   mkdir -p "${tmpdir}/release"
-  tar -xzf "${tmpdir}/lookinctl.tar.gz" -C "${tmpdir}/release"
+  tar -xzf "${archive_path}" -C "${tmpdir}/release"
   binary="$(find "${tmpdir}/release" -type f -name lookinctl | head -n 1 || true)"
   if [[ -z "${binary}" ]]; then
     echo "Release archive did not contain lookinctl." >&2
     exit 1
   fi
+  codesign --verify --strict --verbose=2 "${binary}"
   install_binary "${binary}"
   exit 0
 fi

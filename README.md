@@ -50,7 +50,7 @@ These controls are intended only for local debugging. The matching server packag
 
 ## Automated macOS builds
 
-GitHub Actions builds the Release client for every push and pull request. Every push and manual **Build Lookin Desktop** run uploads an ad-hoc signed universal app ZIP as a workflow artifact. Pushing a `v*` tag also publishes the ZIP and its SHA-256 checksum to GitHub Releases.
+GitHub Actions builds the Release client and universal `lookinctl` binary for every push and pull request. Every push and manual **Build Lookin Desktop** run uploads the ad-hoc signed app ZIP, CLI archive, and SHA-256 checksums as workflow artifacts. Pushing a `v*` tag publishes the same files to GitHub Releases.
 
 # Repository
 LookinServer: https://github.com/QMUI/LookinServer
@@ -119,7 +119,7 @@ xcodebuild -workspace Lookin.xcworkspace -scheme LookinClient -configuration Deb
 
 ## 自动构建 macOS 客户端
 
-GitHub Actions 会为每次 push 和 pull request 构建 Release 客户端。每次 push 和手动运行 **Build Lookin Desktop** 都会上传经过 ad-hoc 签名的通用架构 App ZIP。推送 `v*` tag 时，还会把 ZIP 和 SHA-256 校验文件发布到 GitHub Releases。
+GitHub Actions 会为每次 push 和 pull request 构建 Release 客户端和通用架构 `lookinctl`。每次 push 和手动运行 **Build Lookin Desktop** 都会上传经过 ad-hoc 签名的 App ZIP、CLI 压缩包及 SHA-256 校验文件；推送 `v*` tag 时会把同一组文件发布到 GitHub Releases。
 
 # 源代码仓库
 

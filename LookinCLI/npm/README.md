@@ -18,7 +18,9 @@ npm install -g @your-scope/lookinctl --registry https://npm.example.com
 
 This package ships a native macOS binary and a small Node.js wrapper. It does not depend on `Lookin.app`.
 
-The bundled binary is ad-hoc signed by default, so it does not depend on an expiring certificate. During install and launch the wrapper removes `com.apple.quarantine` when present.
+The bundled binary is ad-hoc signed by default, so it does not depend on an expiring certificate. The package does not run an install-time lifecycle script or remove Gatekeeper quarantine metadata.
+
+The package is distributed under GPL-3.0-only and includes the repository license.
 
 ## Publish
 

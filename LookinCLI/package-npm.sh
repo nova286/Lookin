@@ -100,6 +100,7 @@ fi
 rm -rf "${STAGE_DIR}" "${TARBALL_DIR}" "${MANIFEST_PATH}"
 mkdir -p "${STAGE_DIR}" "${TARBALL_DIR}"
 cp -R "${NPM_TEMPLATE_DIR}/." "${STAGE_DIR}/"
+cp "${ROOT_DIR}/LICENSE" "${STAGE_DIR}/LICENSE"
 mkdir -p "${STAGE_DIR}/prebuilds/${PREBUILD_DIR}"
 install -m 0755 "${NATIVE_BINARY}" "${STAGE_DIR}/prebuilds/${PREBUILD_DIR}/lookinctl"
 
