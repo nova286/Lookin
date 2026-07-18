@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -67,7 +67,7 @@ jobs:
 
       - name: Upload packaged app
         if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lookin-desktop-${{ github.run_id }}
           path: dist/*
@@ -84,7 +84,7 @@ jobs:
 
     steps:
       - name: Download packaged app
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: lookin-desktop-${{ github.run_id }}
           path: dist
